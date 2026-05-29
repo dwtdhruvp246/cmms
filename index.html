@@ -50,7 +50,7 @@
             <h1 class="text-2xl font-bold text-gray-900">CMMS Portal</h1>
             <p class="text-gray-500 mt-1">Maintenance Management System</p>
         </div>
-        <form id="login-form" class="space-y-5" onsubmit="app.login(event)">
+        <form id="login-form" class="space-y-5">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <div class="relative">
@@ -65,7 +65,7 @@
                     <input type="password" id="login-password" required class="w-full pl-10 pr-4 py-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition text-base" placeholder="••••••••">
                 </div>
             </div>
-            <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 sm:py-2.5 rounded-lg transition shadow-lg shadow-primary-500/30">
+            <button type="submit" id="login-btn" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 sm:py-2.5 rounded-lg transition shadow-lg shadow-primary-500/30">
                 <i class="fas fa-sign-in-alt mr-2"></i>Sign In
             </button>
         </form>
@@ -233,6 +233,8 @@ const app = {
                 this.notifOpen = false;
             }
         });
+
+        // Login handlers are attached globally below
     },
 
     async loadUserData() {
@@ -400,7 +402,16 @@ const app = {
 
     // ==================== USERNAME-BASED LOGIN ====================
     async login(e) {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+
+        // Prevent double login attempts
+        if (this.isLoggingIn) return;
+        this.isLoggingIn = true;
+
+        const btn = document.getElementById('login-btn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Signing In...'; }
+
         const username = document.getElementById('login-username').value.trim().toLowerCase();
         const password = document.getElementById('login-password').value;
         const errorDiv = document.getElementById('login-error');
@@ -415,6 +426,8 @@ const app = {
             if (error || !profile) {
                 errorDiv.textContent = error?.message || 'Invalid username or password';
                 errorDiv.classList.remove('hidden');
+                this.isLoggingIn = false;
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Sign In'; }
                 return;
             }
 
@@ -428,6 +441,8 @@ const app = {
             errorDiv.textContent = 'Network error. Please try again.';
             errorDiv.classList.remove('hidden');
             console.error('Login error:', err);
+            this.isLoggingIn = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i>Sign In'; }
         }
     },
 
@@ -610,11 +625,80 @@ const app = {
             'utility': 'Utility'
         };
         return names[dept] || dept;
+    },
+
+    canResolveIssue(issue) {
+        if (!this.user) return false;
+        if (this.user.department === 'admin') return true;
+
+        const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
+        const faultName = ft ? ft.name.toLowerCase() : '';
+        const userDept = this.user.department;
+
+        // Machine managers can resolve any issue for their machines
+        const machineManagers = this.getMachineManagers(issue.machine_id);
+        const isMachineManager = machineManagers.some(m => m.user_id === this.user.id);
+        if (isMachineManager) return true;
+
+        // Department-based resolution
+        if (faultName === 'electrical' && userDept === 'electrical') return true;
+        if (faultName === 'mechanical' && userDept === 'mechanical') return true;
+        if (faultName === 'both' && (userDept === 'electrical' || userDept === 'mechanical')) return true;
+        if (faultName === 'other' && userDept === 'machine_managers') return true;
+
+        return false;
+    },
+
+    canApproveIssue(issue) {
+        if (!this.user) return false;
+        if (this.user.department === 'admin') return true;
+
+        const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
+        const faultName = ft ? ft.name.toLowerCase() : '';
+        const userDept = this.user.department;
+
+        // Machine managers can approve any issue for their machines
+        const machineManagers = this.getMachineManagers(issue.machine_id);
+        const isMachineManager = machineManagers.some(m => m.user_id === this.user.id);
+        if (isMachineManager) return true;
+
+        // Department-based approval
+        if (faultName === 'electrical' && userDept === 'electrical') return true;
+        if (faultName === 'mechanical' && userDept === 'mechanical') return true;
+        if (faultName === 'both' && (userDept === 'electrical' || userDept === 'mechanical')) return true;
+
+        return false;
+    },
+
+    canViewReport(issue) {
+        if (!this.user) return false;
+        if (this.user.department === 'admin' || this.user.department === 'top_management') return true;
+
+        const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
+        const faultName = ft ? ft.name.toLowerCase() : '';
+        const userDept = this.user.department;
+
+        // Machine managers can view reports for their machines
+        const machineManagers = this.getMachineManagers(issue.machine_id);
+        const isMachineManager = machineManagers.some(m => m.user_id === this.user.id);
+        if (isMachineManager) return true;
+
+        // Department-based report access
+        if (faultName === 'electrical' && userDept === 'electrical') return true;
+        if (faultName === 'mechanical' && userDept === 'mechanical') return true;
+        if (faultName === 'both' && (userDept === 'electrical' || userDept === 'mechanical')) return true;
+        if (faultName === 'other' && userDept === 'machine_managers') return true;
+
+        return false;
     }
 };
 
-// Bind login form
-document.getElementById('login-form').addEventListener('submit', (e) => app.login(e));
+// Single login handler - form submit (covers both button click and Enter key)
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    app.login(e);
+});
 
 // Initialize
 app.init();
@@ -1327,7 +1411,7 @@ app.renderMachinesGrid = function(machines) {
     return machines.map(m => {
         const managers = this.getMachineManagers(m.id);
         const mm = managers.find(x => x.manager_type === 'machine_manager');
-        const statusColors = { 'active': 'bg-green-50 text-green-700 border-green-200', 'inactive': 'bg-gray-100 text-gray-600 border-gray-200', 'maintenance': 'bg-amber-50 text-amber-700 border-amber-200' };const statusColors = { 'active': 'bg-green-50 text-green-700 border-green-200', 'inactive': 'bg-gray-100 text-gray-600 border-gray-200', 'maintenance': 'bg-amber-50 text-amber-700 border-amber-200' };
+        const statusColors = { 'active': 'bg-green-50 text-green-700 border-green-200', 'inactive': 'bg-gray-100 text-gray-600 border-gray-200', 'maintenance': 'bg-amber-50 text-amber-700 border-amber-200' };
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
                 <div class="p-5">
@@ -1344,8 +1428,6 @@ app.renderMachinesGrid = function(machines) {
                     <div class="text-xs text-gray-400 mb-3"><i class="fas fa-map-marker-alt mr-1"></i> ${this.escapeHtml(m.location || 'No location')}</div>
                     <div class="space-y-1.5 text-xs">
                         <div class="flex items-center gap-2"><span class="text-gray-500 w-24">Machine Mgr:</span><span class="font-medium text-gray-700">${mm ? this.escapeHtml(mm.user?.full_name || 'Unassigned') : '<span class="text-red-400">Unassigned</span>'}</span></div>
-                        <div class="flex items-center gap-2"><span class="text-gray-500 w-24">Mechanical:</span><span class="font-medium text-gray-700">${mech ? this.escapeHtml(mech.user?.full_name || 'Unassigned') : '<span class="text-red-400">Unassigned</span>'}</span></div>
-                        <div class="flex items-center gap-2"><span class="text-gray-500 w-24">Electrical:</span><span class="font-medium text-gray-700">${elec ? this.escapeHtml(elec.user?.full_name || 'Unassigned') : '<span class="text-red-400">Unassigned</span>'}</span></div>
                     </div>
                 </div>
                 <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-2">
@@ -1444,7 +1526,7 @@ app.openAssignManagersModal = function(machineId) {
     const userOptions = this.users.map(u => `<option value="${u.id}">${this.escapeHtml(u.full_name)} (${u.post || u.role})</option>`).join('');
     const currentMm = managers.find(x => x.manager_type === 'machine_manager')?.user_id || '';
 
-    this.openModal(`this.openModal(`
+    this.openModal(`
         <div class="p-6">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-xl font-bold text-gray-900">Assign Managers</h2>
@@ -1683,7 +1765,7 @@ app.savePermissions = async function(e, userId) {
     }
     this.showToast('Permissions saved successfully');
     this.closeModal();
-    if (userId === this.user.id) { await this.loadPermissions(); this.renderSidebar(); }
+    if (userId === this.user.id) { await this.loadUserData(); this.renderSidebar(); }
 };
 
 app.openEditUserModal = function(userId) {
