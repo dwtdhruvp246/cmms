@@ -50,7 +50,7 @@
             <h1 class="text-2xl font-bold text-gray-900">CMMS Portal</h1>
             <p class="text-gray-500 mt-1">Maintenance Management System</p>
         </div>
-        <form id="login-form" class="space-y-5">
+        <form id="login-form" class="space-y-5" onsubmit="app.login(event)">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <div class="relative">
@@ -588,6 +588,28 @@ const app = {
     getUserName(userId) {
         const u = this.users.find(x => x.id === userId);
         return u ? u.full_name : 'Unknown';
+    },
+    getDeptColor(dept) {
+        const colors = {
+            'electrical': '#F59E0B',
+            'mechanical': '#3B82F6',
+            'top_management': '#7C3AED',
+            'admin': '#EF4444',
+            'machine_managers': '#10B981',
+            'utility': '#EC4899'
+        };
+        return colors[dept] || '#6B7280';
+    },
+    getDeptName(dept) {
+        const names = {
+            'electrical': 'Electrical',
+            'mechanical': 'Mechanical',
+            'top_management': 'Top Management',
+            'admin': 'Admin',
+            'machine_managers': 'Machine Managers',
+            'utility': 'Utility'
+        };
+        return names[dept] || dept;
     }
 };
 
@@ -658,7 +680,7 @@ app.renderDashboard = async function() {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">
-                                ${recentIssues.length ? recentIssues.map(issue => `
+                                ${recentIssues.filter(i => i.status !== 'closed').length ? recentIssues.filter(i => i.status !== 'closed').map(issue => `
                                     <tr class="hover:bg-gray-50 cursor-pointer" onclick="app.openIssueDetail('${issue.id}')">
                                         <td class="px-5 py-3 font-medium text-gray-900">${this.escapeHtml(issue.machines?.name || 'Unknown')}</td>
                                         <td class="px-5 py-3 text-gray-600">${this.escapeHtml(issue.title)}</td>
@@ -893,18 +915,10 @@ app.openIssueDetail = async function(issueId) {
     if (error || !issue) { this.showToast('Issue not found', 'error'); return; }
 
     const machineManagers = this.getMachineManagers(issue.machine_id);
-    const requiredTypes = ['machine_manager', 'mechanical_manager', 'electrical_manager'];
-    const requiredManagers = [];
-    requiredTypes.forEach(type => {
-        const found = machineManagers.filter(m => m.manager_type === type);
-        if (found.length) found.forEach(m => requiredManagers.push({ ...m, typeLabel: type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) }));
-    });
-
     const approvals = issue.issue_approvals || [];
-    const canResolve = issue.status === 'open' && this.hasPermission('issues', 'write');
-    const canApprove = issue.status === 'pending_approval' || issue.status === 'in_progress';
+    const canResolve = this.canResolveIssue(issue);
+    const canApprove = (issue.status === 'pending_approval' || issue.status === 'in_progress') && this.canApproveIssue(issue);
     const currentUserApproval = approvals.find(a => a.user_id === this.user.id);
-    const isAssignedManager = requiredManagers.some(m => m.user_id === this.user.id);
 
     const resolutionSection = (issue.status === 'open' || issue.status === 'in_progress') && this.hasPermission('issues', 'write') ? `
         <div class="bg-blue-50 rounded-lg p-4 mt-4">
@@ -926,26 +940,45 @@ app.openIssueDetail = async function(issueId) {
         <div class="bg-amber-50 rounded-lg p-4 mt-4">
             <h4 class="font-semibold text-amber-900 mb-3"><i class="fas fa-clipboard-check mr-1"></i> Manager Approvals</h4>
             <div class="space-y-2">
-                ${requiredManagers.map(m => {
-                    const approval = approvals.find(a => a.user_id === m.user_id);
-                    const isCurrentUser = m.user_id === this.user.id;
-                    return `
-                        <div class="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-600">${m.user?.full_name?.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() || '?'}</div>
-                                <div>
-                                    <p class="text-sm font-medium text-gray-900">${this.escapeHtml(m.user?.full_name || 'Unknown')}</p>
-                                    <p class="text-xs text-gray-500">${m.typeLabel}</p>
+                ${(() => {
+                    // Get all users who can approve this issue
+                    const approvers = this.users.filter(u => {
+                        if (!u.active) return false;
+                        const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
+                        if (!ft) return false;
+                        const deptName = ft.name.toLowerCase();
+                        // Machine managers can always approve
+                        if (u.department === 'machine_managers') {
+                            const mm = machineManagers.find(m => m.user_id === u.id);
+                            return !!mm;
+                        }
+                        // Department members can approve matching issues
+                        if (u.department === deptName) return true;
+                        if (deptName === 'both' && (u.department === 'electrical' || u.department === 'mechanical')) return true;
+                        if (u.department === 'admin') return true;
+                        return false;
+                    });
+                    return approvers.map(u => {
+                        const approval = approvals.find(a => a.user_id === u.id);
+                        const isCurrentUser = u.id === this.user.id;
+                        return `
+                            <div class="flex items-center justify-between bg-white rounded-lg p-3 border border-amber-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-600">${u.full_name?.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() || '?'}</div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">${this.escapeHtml(u.full_name || 'Unknown')}</p>
+                                        <p class="text-xs text-gray-500">${this.getDeptName(u.department)} - ${this.escapeHtml(u.position || '')}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${approval ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium"><i class="fas fa-check-circle"></i> Approved ${this.formatDate(approval.approved_at)}</span>`
+                                    : `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium"><i class="fas fa-clock"></i> Pending</span>
+                                        ${isCurrentUser && canApprove ? `<button onclick="app.approveIssue('${issue.id}')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 sm:px-2 sm:py-1 rounded text-xs font-medium transition">Approve</button>` : ''}`}
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                ${approval ? `<span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium"><i class="fas fa-check-circle"></i> Approved ${this.formatDate(approval.approved_at)}</span>`
-                                : `<span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium"><i class="fas fa-clock"></i> Pending</span>
-                                    ${isCurrentUser && canApprove ? `<button onclick="app.approveIssue('${issue.id}')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 sm:px-2 sm:py-1 rounded text-xs font-medium transition">Approve</button>` : ''}`}
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
+                        `;
+                    }).join('');
+                })()}
             </div>
             ${issue.status === 'closed' ? `<div class="mt-3 p-2 bg-green-100 text-green-800 rounded-lg text-sm text-center font-medium"><i class="fas fa-check-double mr-1"></i> All managers have approved — Issue Closed</div>` : ''}
         </div>
@@ -1033,6 +1066,7 @@ app.exportIssueReport = async function(issueId) {
         .select('*, machines(*), fault_types(name), priorities(name, color), profiles(full_name), issue_approvals(*, profiles(full_name))')
         .eq('id', issueId).single();
     if (!issue) return;
+    if (!this.canViewReport(issue)) { this.showToast('You do not have permission to view this report', 'error'); return; }
     const managers = this.getMachineManagers(issue.machine_id);
     const approvals = issue.issue_approvals || [];
 
@@ -1293,9 +1327,7 @@ app.renderMachinesGrid = function(machines) {
     return machines.map(m => {
         const managers = this.getMachineManagers(m.id);
         const mm = managers.find(x => x.manager_type === 'machine_manager');
-        const mech = managers.find(x => x.manager_type === 'mechanical_manager');
-        const elec = managers.find(x => x.manager_type === 'electrical_manager');
-        const statusColors = { 'active': 'bg-green-50 text-green-700 border-green-200', 'inactive': 'bg-gray-100 text-gray-600 border-gray-200', 'maintenance': 'bg-amber-50 text-amber-700 border-amber-200' };
+        const statusColors = { 'active': 'bg-green-50 text-green-700 border-green-200', 'inactive': 'bg-gray-100 text-gray-600 border-gray-200', 'maintenance': 'bg-amber-50 text-amber-700 border-amber-200' };const statusColors = { 'active': 'bg-green-50 text-green-700 border-green-200', 'inactive': 'bg-gray-100 text-gray-600 border-gray-200', 'maintenance': 'bg-amber-50 text-amber-700 border-amber-200' };
         return `
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
                 <div class="p-5">
@@ -1389,11 +1421,9 @@ app.openMachineDetail = async function(machineId) {
             </div>
             <div class="bg-gray-50 rounded-lg p-4 mb-4"><p class="text-sm text-gray-700">${this.escapeHtml(m.description || 'No description')}</p></div>
             <h4 class="font-semibold text-gray-900 mb-2 text-sm">Assigned Managers</h4>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 manager-grid">
-                ${['machine_manager','mechanical_manager','electrical_manager'].map(type => {
-                    const mgr = managers.find(x => x.manager_type === type);
-                    return `<div class="bg-white border border-gray-200 rounded-lg p-3 text-center"><p class="text-xs text-gray-500 mb-1">${type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p><p class="text-sm font-medium text-gray-900">${mgr ? this.escapeHtml(mgr.user?.full_name || 'Unknown') : '<span class="text-red-400 text-xs">Unassigned</span>'}</p></div>`;
-                }).join('')}
+            <div class="bg-white border border-gray-200 rounded-lg p-3 mb-4">
+                <p class="text-xs text-gray-500 mb-1">Machine Manager</p>
+                <p class="text-sm font-medium text-gray-900">${managers.length ? this.escapeHtml(managers[0].user?.full_name || 'Unknown') : '<span class="text-red-400 text-xs">Unassigned</span>'}</p>
             </div>
             <h4 class="font-semibold text-gray-900 mb-2 text-sm">Recent Issues</h4>
             <div class="table-responsive">
@@ -1413,10 +1443,8 @@ app.openAssignManagersModal = function(machineId) {
     const managers = this.getMachineManagers(machineId);
     const userOptions = this.users.map(u => `<option value="${u.id}">${this.escapeHtml(u.full_name)} (${u.post || u.role})</option>`).join('');
     const currentMm = managers.find(x => x.manager_type === 'machine_manager')?.user_id || '';
-    const currentMech = managers.find(x => x.manager_type === 'mechanical_manager')?.user_id || '';
-    const currentElec = managers.find(x => x.manager_type === 'electrical_manager')?.user_id || '';
 
-    this.openModal(`
+    this.openModal(`this.openModal(`
         <div class="p-6">
             <div class="flex items-center justify-between mb-5">
                 <h2 class="text-xl font-bold text-gray-900">Assign Managers</h2>
@@ -1424,12 +1452,10 @@ app.openAssignManagersModal = function(machineId) {
             </div>
             <p class="text-sm text-gray-500 mb-4">${this.escapeHtml(m.name)}</p>
             <form onsubmit="app.saveMachineManagers(event, '${machineId}')" class="space-y-4">
-                <div class="form-grid-2 grid grid-cols-1 sm:grid-cols-1 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">Machine Manager</label><select name="machine_manager" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"><option value="">-- Select --</option>${userOptions}</select></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">Mechanical Manager</label><select name="mechanical_manager" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"><option value="">-- Select --</option>${userOptions}</select></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">Electrical Manager</label><select name="electrical_manager" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"><option value="">-- Select --</option>${userOptions}</select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">Machine Manager <span class="text-red-500">*</span></label><select name="machine_manager" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"><option value="">-- Select Machine Manager --</option>${userOptions}</select></div>
                 <div class="pt-2 flex justify-end gap-2">
                     <button type="button" onclick="app.closeModal()" class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition w-full sm:w-auto">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition w-full sm:w-auto">Save Assignments</button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition w-full sm:w-auto">Save Assignment</button>
                 </div>
             </form>
         </div>
@@ -1438,8 +1464,6 @@ app.openAssignManagersModal = function(machineId) {
         const form = document.querySelector('#modal-content form');
         if (form) {
             form.querySelector('[name="machine_manager"]').value = currentMm;
-            form.querySelector('[name="mechanical_manager"]').value = currentMech;
-            form.querySelector('[name="electrical_manager"]').value = currentElec;
         }
     }, 50);
 };
@@ -1448,18 +1472,12 @@ app.saveMachineManagers = async function(e, machineId) {
     e.preventDefault();
     const formData = new FormData(e.target);
     await supabaseClient.from('machine_managers').delete().eq('machine_id', machineId);
-    const inserts = [];
     const mm = formData.get('machine_manager');
-    const mech = formData.get('mechanical_manager');
-    const elec = formData.get('electrical_manager');
-    if (mm) inserts.push({ machine_id: machineId, user_id: mm, manager_type: 'machine_manager' });
-    if (mech) inserts.push({ machine_id: machineId, user_id: mech, manager_type: 'mechanical_manager' });
-    if (elec) inserts.push({ machine_id: machineId, user_id: elec, manager_type: 'electrical_manager' });
-    if (inserts.length) {
-        const { error } = await supabaseClient.from('machine_managers').insert(inserts);
+    if (mm) {
+        const { error } = await supabaseClient.from('machine_managers').insert({ machine_id: machineId, user_id: mm, manager_type: 'machine_manager' });
         if (error) { this.showToast(error.message, 'error'); return; }
     }
-    this.showToast('Managers assigned successfully');
+    this.showToast('Machine manager assigned successfully');
     this.closeModal();
     this.renderMachines();
 };
@@ -1834,9 +1852,11 @@ app.generateReport = async function() {
 
 app.exportBulkReport = async function() {
     if (!this._reportCache || !this._reportCache.length) return;
+    const accessibleIssues = this._reportCache.filter(issue => this.canViewReport(issue));
+    if (!accessibleIssues.length) { this.showToast('No reports accessible for your department', 'error'); return; }
     const reportBody = document.getElementById('report-body');
     let rows = '';
-    for (const issue of this._reportCache) {
+    for (const issue of accessibleIssues) {
         const managers = this.getMachineManagers(issue.machine_id);
         const approvals = issue.issue_approvals || [];
         rows += `
