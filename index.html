@@ -617,8 +617,8 @@ app.renderDashboard = async function() {
 
     const stats = [
         { label: 'Open Issues', value: openCount, icon: 'fa-exclamation-circle', color: 'text-red-600', bg: 'bg-red-50' },
+        { label: 'In Progress', value: inProgressCount, icon: 'fa-wrench', color: 'text-blue-600', bg: 'bg-blue-50' },
         { label: 'Pending Approval', value: pendingCount, icon: 'fa-clock', color: 'text-amber-600', bg: 'bg-amber-50' },
-        { label: 'Scheduled PM', value: upcomingPm.length, icon: 'fa-calendar-check', color: 'text-blue-600', bg: 'bg-blue-50' },
         { label: 'Scheduled PM', value: scheduledPmCount, icon: 'fa-calendar-check', color: 'text-emerald-600', bg: 'bg-emerald-50' }
     ];
 
@@ -982,7 +982,7 @@ app.openIssueDetail = async function(issueId) {
             ${issue.resolution_photos && issue.resolution_photos.length ? `
                 <div class="mb-4">
                     <h4 class="font-semibold text-gray-900 mb-2 text-sm">Photos</h4>
-                    <div class="grid grid-cols-3 gap-2">${issue.resolution_photos.map(url => `<a href="${url}" target="_blank"><img src="${url}" class="w-full h-24 object-cover rounded-lg hover:opacity-80 transition"></a>`).join('')}</div>
+                    <div class="grid grid-cols-3 gap-2">${issue.resolution_photos.map(url => `<a href="${url}" ><img src="${url}" class="w-full h-24 object-cover rounded-lg hover:opacity-80 transition"></a>`).join('')}</div>
                 </div>
             ` : ''}
             ${resolutionSection}
