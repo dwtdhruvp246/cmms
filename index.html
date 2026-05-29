@@ -342,10 +342,10 @@ const app = {
         nav.innerHTML = this.modules.map(m => {
             if (!this.hasPermission(m.perm, 'read')) return '';
             const active = this.currentPage === m.id ? 'active' : '';
-            return `<a href="#${m.id}" onclick="app.navigate('${m.id}')" class="sidebar-item ${active} flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-medium text-gray-700 transition">
+            return `<button onclick="app.navigate('${m.id}', event)" class="sidebar-item ${active} w-full text-left flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-lg text-sm font-medium text-gray-700 transition border-none bg-transparent cursor-pointer">
                 <i class="fas ${m.icon} w-5 text-center"></i>
                 <span>${m.label}</span>
-            </a>`;
+            </button>`;
         }).join('');
     },
 
@@ -369,7 +369,8 @@ const app = {
         }
     },
 
-    navigate(page) {
+    navigate(page, event) {
+        if (event) event.preventDefault();
         this.currentPage = page;
         window.location.hash = page;
         this.renderSidebar();
@@ -643,7 +644,7 @@ app.renderDashboard = async function() {
                 <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="p-5 border-b border-gray-100 flex items-center justify-between">
                         <h3 class="font-bold text-gray-900">Recent Issues</h3>
-                        <button onclick="app.navigate('issues')" class="text-sm text-primary-600 hover:underline font-medium py-1 px-2">View All</button>
+                        <button onclick="app.navigate('issues', event)" class="text-sm text-primary-600 hover:underline font-medium py-1 px-2">View All</button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
