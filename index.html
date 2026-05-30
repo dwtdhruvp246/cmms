@@ -499,8 +499,13 @@ const app = {
         const session = localStorage.getItem(SESSION_KEY);
         if (session) {
             try {
-                this.user = JSON.parse(session);
-                this.profile = this.user;
+                const parsed = JSON.parse(session);
+                // Validate stored session has required fields
+                if (!parsed || !parsed.id || !parsed.username) {
+                    throw new Error('Invalid session');
+                }
+                this.user = parsed;
+                this.profile = parsed;
                 await this.loadUserData();
                 this.showApp();
             } catch (e) {
@@ -699,7 +704,12 @@ const app = {
 
         try {
             const { data: profile, error } = await supabaseClient.rpc('authenticate_user', { p_username: username, p_password: password });
-            if (error || !profile) {
+
+            // DEBUG: log what we got back
+            console.log('Auth result:', { profile, error, type: typeof profile, isArray: Array.isArray(profile) });
+
+            // Must be a valid object with id and username
+            if (error || !profile || typeof profile !== 'object' || Array.isArray(profile) || !profile.id || !profile.username) {
                 errorDiv.textContent = error?.message || 'Invalid username or password';
                 errorDiv.classList.remove('hidden');
                 this.isLoggingIn = false;
