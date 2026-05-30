@@ -557,10 +557,11 @@ const app = {
 
     async loadReferenceData() {
         const [
-            { data: ft }, { data: pr }, { data: mc }, { data: us },
+            { data: ft }, { data: ftd }, { data: pr }, { data: mc }, { data: us },
             { data: dp }, { data: po }, { data: rl }, { data: di }
         ] = await Promise.all([
-            supabaseClient.from('fault_types').select('*, fault_type_departments(*, departments(*))').eq('active', true).order('name'),
+            supabaseClient.from('fault_types').select('*').eq('active', true).order('name'),
+            supabaseClient.from('fault_type_departments').select('*, departments(*)'),
             supabaseClient.from('priorities').select('*').eq('active', true).order('level'),
             supabaseClient.from('machines').select('*, machine_managers(*)').order('name'),
             supabaseClient.from('profiles').select('*, roles(*), departments(*), positions(*)').order('full_name'),
@@ -570,6 +571,12 @@ const app = {
             supabaseClient.from('downtime_impacts').select('*').eq('active', true).order('name')
         ]);
         this.faultTypes = ft || [];
+        // Merge fault_type_departments into faultTypes
+        if (ftd && ft) {
+            ft.forEach(f => {
+                f.fault_type_departments = ftd.filter(fd => fd.fault_type_id === f.id);
+            });
+        }
         this.priorities = pr || [];
         this.machines = mc || [];
         this.users = us || [];
@@ -1390,7 +1397,7 @@ app.deleteIssue = async function(issueId) {
 };
 
 app.openIssueDetail = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*, fault_type_departments(*, departments(*))), priorities(*), downtime_impacts(*), profiles(*), issue_approvals(*, profiles(*, roles(*)))').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), downtime_impacts(*), profiles(*), issue_approvals(*, profiles(*, roles(*)))').eq('id', issueId).single();
     if (!issue) { this.showToast('Issue not found', 'error'); return; }
 
     const machineManagers = this.getMachineManagers(issue.machine_id);
@@ -2008,7 +2015,7 @@ app.generateReport = async function() {
     const to = document.getElementById('report-to').value;
     const machineId = document.getElementById('report-machine').value;
     const deptId = document.getElementById('report-dept').value;
-    let query = supabaseClient.from('issues').select('*, machines(name, location), fault_types(*, fault_type_departments(*, departments(*))), priorities(name, color), profiles(full_name), issue_approvals(*, profiles(full_name))').eq('status', 'closed').order('resolved_at', { ascending: false });
+    let query = supabaseClient.from('issues').select('*, machines(name, location), fault_types(*), priorities(name, color), profiles(full_name), issue_approvals(*, profiles(full_name))').eq('status', 'closed').order('resolved_at', { ascending: false });
     if (from) query = query.gte('resolved_at', from + 'T00:00:00');
     if (to) query = query.lte('resolved_at', to + 'T23:59:59');
     if (machineId) query = query.eq('machine_id', machineId);
