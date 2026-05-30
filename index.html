@@ -560,7 +560,7 @@ const app = {
             { data: ft }, { data: pr }, { data: mc }, { data: us },
             { data: dp }, { data: po }, { data: rl }, { data: di }
         ] = await Promise.all([
-            supabaseClient.from('fault_types').select('*, departments(*)').eq('active', true).order('name'),
+            supabaseClient.from('fault_types').select('*, fault_type_departments(*, departments(*))').eq('active', true).order('name'),
             supabaseClient.from('priorities').select('*').eq('active', true).order('level'),
             supabaseClient.from('machines').select('*, machine_managers(*)').order('name'),
             supabaseClient.from('profiles').select('*, roles(*), departments(*), positions(*)').order('full_name'),
@@ -878,6 +878,15 @@ const app = {
         const d = this.departments.find(x => x.id === deptId);
         return d ? d.name : 'Unknown';
     },
+    getFaultTypeDepts(faultType) {
+        if (!faultType) return [];
+        const ft = typeof faultType === 'object' ? faultType : this.faultTypes.find(f => f.id === faultType);
+        if (!ft) return [];
+        if (ft.fault_type_departments) {
+            return ft.fault_type_departments.map(fd => fd.departments?.name || this.getDeptName(fd.department_id)).filter(Boolean);
+        }
+        return [];
+    },
     getDeptColor(deptId) {
         const colors = {
             'electrical': '#F59E0B', 'mechanical': '#3B82F6', 'top_management': '#7C3AED',
@@ -915,38 +924,51 @@ const app = {
         if (!this.user) return false;
         if (this.isAdmin()) return true;
         const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
-        const faultDept = ft?.department_id;
-        const userDept = this.user.department_id;
+        const faultDepts = ft ? this.getFaultTypeDepts(ft) : [];
+        const userDeptId = this.user.department_id;
         const managers = this.getMachineManagers(issue.machine_id);
         const isMachineManager = managers.some(m => m.user_id === this.user.id);
         if (isMachineManager) return true;
-        if (faultDept && userDept === faultDept) return true;
-        if (!faultDept && userDept === this.departments.find(d => d.name === 'Machine Managers')?.id) return true;
+        if (faultDepts.length > 0) {
+            const deptIds = (ft.fault_type_departments || []).map(fd => fd.department_id);
+            if (deptIds.includes(userDeptId)) return true;
+        } else {
+            // No departments assigned - machine managers only
+            const mmDept = this.departments.find(d => d.name === 'Machine Managers');
+            if (mmDept && userDeptId === mmDept.id) return true;
+        }
         return false;
     },
     canApproveIssue(issue) {
         if (!this.user) return false;
         if (this.isAdmin()) return true;
         const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
-        const faultDept = ft?.department_id;
-        const userDept = this.user.department_id;
+        const faultDepts = ft ? this.getFaultTypeDepts(ft) : [];
+        const userDeptId = this.user.department_id;
         const managers = this.getMachineManagers(issue.machine_id);
         const isMachineManager = managers.some(m => m.user_id === this.user.id);
         if (isMachineManager) return true;
-        if (faultDept && userDept === faultDept) return true;
+        if (faultDepts.length > 0) {
+            const deptIds = (ft.fault_type_departments || []).map(fd => fd.department_id);
+            if (deptIds.includes(userDeptId)) return true;
+        }
         return false;
     },
     canViewReport(issue) {
         if (!this.user) return false;
         if (this.isAdmin()) return true;
         const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
-        const faultDept = ft?.department_id;
-        const userDept = this.user.department_id;
+        const faultDepts = ft ? this.getFaultTypeDepts(ft) : [];
+        const userDeptId = this.user.department_id;
         const managers = this.getMachineManagers(issue.machine_id);
         const isMachineManager = managers.some(m => m.user_id === this.user.id);
         if (isMachineManager) return true;
-        if (faultDept && userDept === faultDept) return true;
-        if (!faultDept) return true;
+        if (faultDepts.length > 0) {
+            const deptIds = (ft.fault_type_departments || []).map(fd => fd.department_id);
+            if (deptIds.includes(userDeptId)) return true;
+        } else {
+            return true;
+        }
         return false;
     }
 };
@@ -1368,7 +1390,7 @@ app.deleteIssue = async function(issueId) {
 };
 
 app.openIssueDetail = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*, departments(*)), priorities(*), downtime_impacts(*), profiles(*), issue_approvals(*, profiles(*, roles(*)))').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*, fault_type_departments(*, departments(*))), priorities(*), downtime_impacts(*), profiles(*), issue_approvals(*, profiles(*, roles(*)))').eq('id', issueId).single();
     if (!issue) { this.showToast('Issue not found', 'error'); return; }
 
     const machineManagers = this.getMachineManagers(issue.machine_id);
@@ -1400,12 +1422,12 @@ app.openIssueDetail = async function(issueId) {
                     const approvers = this.users.filter(u => {
                         if (!u.active) return false;
                         const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
-                        const faultDept = ft?.department_id;
+                        const deptIds = ft ? (ft.fault_type_departments || []).map(fd => fd.department_id) : [];
                         const managers = this.getMachineManagers(issue.machine_id);
                         const isMachineManager = managers.some(m => m.user_id === u.id);
                         if (isMachineManager) return true;
                         if (u.roles?.is_admin) return true;
-                        if (faultDept && u.department_id === faultDept) return true;
+                        if (deptIds.length > 0 && deptIds.includes(u.department_id)) return true;
                         return false;
                     });
                     return approvers.map(u => {
@@ -1453,6 +1475,7 @@ app.openIssueDetail = async function(issueId) {
                 <div class="p-3 rounded-xl bg-white/60 border border-white/60"><span class="text-slate-500 block text-xs mb-1">Priority</span><span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold" style="background:${issue.priorities?.color}15; color:${issue.priorities?.color}"><span class="priority-dot" style="color:${issue.priorities?.color}; background:${issue.priorities?.color}"></span>${issue.priorities?.name || '-'}</span></div>
                 <div class="p-3 rounded-xl bg-white/60 border border-white/60"><span class="text-slate-500 block text-xs mb-1">Downtime</span><span class="font-semibold text-slate-900">${this.getDowntimeName(issue.downtime_impact_id)}</span></div>
                 <div class="p-3 rounded-xl bg-white/60 border border-white/60"><span class="text-slate-500 block text-xs mb-1">Type</span><span class="text-xs font-medium px-2 py-1 rounded-lg ${issue.issue_type === 'breakdown' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}">${issue.issue_type === 'breakdown' ? 'Breakdown' : 'Minor Issue'}</span></div>
+                <div class="p-3 rounded-xl bg-white/60 border border-white/60 col-span-2"><span class="text-slate-500 block text-xs mb-1">Departments Responsible</span><div class="flex flex-wrap gap-1">${(() => { const depts = this.getFaultTypeDepts(issue.fault_types); return depts.length ? depts.map(d => `<span class="px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">${this.escapeHtml(d)}</span>`).join('') : '<span class="text-slate-400 text-xs">None assigned</span>'; })()}</div></div>
             </div>
 
             <div class="p-4 rounded-2xl bg-white/60 border border-white/60 mb-5">
@@ -1985,11 +2008,11 @@ app.generateReport = async function() {
     const to = document.getElementById('report-to').value;
     const machineId = document.getElementById('report-machine').value;
     const deptId = document.getElementById('report-dept').value;
-    let query = supabaseClient.from('issues').select('*, machines(name, location), fault_types(*, departments(*)), priorities(name, color), profiles(full_name), issue_approvals(*, profiles(full_name))').eq('status', 'closed').order('resolved_at', { ascending: false });
+    let query = supabaseClient.from('issues').select('*, machines(name, location), fault_types(*, fault_type_departments(*, departments(*))), priorities(name, color), profiles(full_name), issue_approvals(*, profiles(full_name))').eq('status', 'closed').order('resolved_at', { ascending: false });
     if (from) query = query.gte('resolved_at', from + 'T00:00:00');
     if (to) query = query.lte('resolved_at', to + 'T23:59:59');
     if (machineId) query = query.eq('machine_id', machineId);
-    if (deptId) query = query.eq('fault_types.department_id', deptId);
+    if (deptId) query = query.eq('fault_types.fault_type_departments.department_id', deptId);
     const { data: issues, error } = await query;
     if (error) { this.showToast(error.message, 'error'); return; }
     const container = document.getElementById('report-results');
@@ -2157,7 +2180,14 @@ app.renderSettings = async function() {
                                 <tr class="hover:bg-blue-50/30 transition">
                                     <td class="px-5 py-3.5 font-semibold text-slate-900">${this.escapeHtml(ft.name)}</td>
                                     <td class="px-5 py-3.5 text-slate-600">${this.escapeHtml(ft.description || '-')}</td>
-                                    <td class="px-5 py-3.5 text-slate-600">${this.getDeptName(ft.department_id)}</td>
+                                    <td class="px-5 py-3.5">
+                                        <div class="flex flex-wrap gap-1">
+                                            ${(() => {
+                                                const depts = this.getFaultTypeDepts(ft);
+                                                return depts.length ? depts.map(d => `<span class="px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700">${this.escapeHtml(d)}</span>`).join('') : '<span class="text-slate-400 text-xs">None</span>';
+                                            })()}
+                                        </div>
+                                    </td>
                                     <td class="px-5 py-3.5">${ft.active ? '<span class="status-badge bg-emerald-50 text-emerald-700">Active</span>' : '<span class="status-badge bg-slate-100 text-slate-600">Inactive</span>'}</td>
                                     <td class="px-5 py-3.5">
                                         <button onclick="app.openEditFaultTypeModal('${ft.id}')" class="text-slate-500 hover:text-slate-800 text-sm p-2 rounded-lg hover:bg-slate-50 transition" title="Edit"><i class="fas fa-edit"></i></button>
@@ -2277,7 +2307,12 @@ app.renderSettings = async function() {
 
 // Fault Type CRUD
 app.openAddFaultTypeModal = function() {
-    const deptOptions = this.departments.map(d => `<option value="${d.id}">${this.escapeHtml(d.name)}</option>`).join('');
+    const deptCheckboxes = this.departments.map(d => `
+        <label class="flex items-center gap-2 p-3 rounded-xl bg-white/50 border border-white/60 cursor-pointer hover:bg-white/80 transition">
+            <input type="checkbox" name="dept_ids" value="${d.id}" class="w-4 h-4 rounded border-slate-300 text-blue-600">
+            <span class="text-sm font-medium text-slate-700">${this.escapeHtml(d.name)}</span>
+        </label>
+    `).join('');
     this.openModal(`
         <div class="p-6">
             <div class="flex items-center justify-between mb-6">
@@ -2287,7 +2322,11 @@ app.openAddFaultTypeModal = function() {
             <form onsubmit="app.addFaultType(event)" class="space-y-4">
                 <div><label class="block text-sm font-semibold text-slate-700 mb-2">Name <span class="text-red-500">*</span></label><input type="text" name="name" required class="soft-input w-full px-4 py-2.5"></div>
                 <div><label class="block text-sm font-semibold text-slate-700 mb-2">Description</label><textarea name="description" rows="2" class="soft-input w-full px-4 py-2.5"></textarea></div>
-                <div><label class="block text-sm font-semibold text-slate-700 mb-2">Department Responsible</label><select name="department_id" class="soft-select w-full px-4 py-2.5"><option value="">None</option>${deptOptions}</select></div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Departments Responsible</label>
+                    <p class="text-xs text-slate-500 mb-2">Select all departments that should handle this fault type</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${deptCheckboxes}</div>
+                </div>
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" onclick="app.closeModal()" class="soft-btn-secondary px-5 py-2.5 text-sm font-semibold">Cancel</button>
                     <button type="submit" class="soft-btn text-white px-5 py-2.5 text-sm font-semibold">Add</button>
@@ -2299,16 +2338,33 @@ app.openAddFaultTypeModal = function() {
 
 app.addFaultType = async function(e) {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const { error } = await supabaseClient.from('fault_types').insert({ name: formData.get('name'), description: formData.get('description'), department_id: formData.get('department_id') || null });
-    if (error) { this.showToast(error.message, 'error'); return; }
+    const form = e.target;
+    const formData = new FormData(form);
+    const { data: ft, error } = await supabaseClient.from('fault_types').insert({
+        name: formData.get('name'), description: formData.get('description')
+    }).select().single();
+    if (error || !ft) { this.showToast(error.message, 'error'); return; }
+
+    // Insert department associations
+    const deptIds = Array.from(form.querySelectorAll('input[name="dept_ids"]:checked')).map(cb => cb.value);
+    if (deptIds.length) {
+        const inserts = deptIds.map(did => ({ fault_type_id: ft.id, department_id: did }));
+        await supabaseClient.from('fault_type_departments').insert(inserts);
+    }
+
     this.showToast('Fault type added'); this.closeModal(); this.renderSettings();
 };
 
 app.openEditFaultTypeModal = async function(id) {
     const ft = this.faultTypes.find(x => x.id === id);
     if (!ft) return;
-    const deptOptions = this.departments.map(d => `<option value="${d.id}" ${d.id === ft.department_id ? 'selected' : ''}>${this.escapeHtml(d.name)}</option>`).join('');
+    const assignedDeptIds = (ft.fault_type_departments || []).map(fd => fd.department_id);
+    const deptCheckboxes = this.departments.map(d => `
+        <label class="flex items-center gap-2 p-3 rounded-xl bg-white/50 border border-white/60 cursor-pointer hover:bg-white/80 transition">
+            <input type="checkbox" name="dept_ids" value="${d.id}" ${assignedDeptIds.includes(d.id) ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-blue-600">
+            <span class="text-sm font-medium text-slate-700">${this.escapeHtml(d.name)}</span>
+        </label>
+    `).join('');
     this.openModal(`
         <div class="p-6">
             <div class="flex items-center justify-between mb-6">
@@ -2318,7 +2374,11 @@ app.openEditFaultTypeModal = async function(id) {
             <form onsubmit="app.updateFaultType(event, '${id}')" class="space-y-4">
                 <div><label class="block text-sm font-semibold text-slate-700 mb-2">Name <span class="text-red-500">*</span></label><input type="text" name="name" value="${this.escapeHtml(ft.name)}" required class="soft-input w-full px-4 py-2.5"></div>
                 <div><label class="block text-sm font-semibold text-slate-700 mb-2">Description</label><textarea name="description" rows="2" class="soft-input w-full px-4 py-2.5">${this.escapeHtml(ft.description || '')}</textarea></div>
-                <div><label class="block text-sm font-semibold text-slate-700 mb-2">Department Responsible</label><select name="department_id" class="soft-select w-full px-4 py-2.5"><option value="">None</option>${deptOptions}</select></div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Departments Responsible</label>
+                    <p class="text-xs text-slate-500 mb-2">Select all departments that should handle this fault type</p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">${deptCheckboxes}</div>
+                </div>
                 <div class="flex items-center gap-2"><input type="checkbox" name="active" id="ft_active" ${ft.active ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 text-blue-600"><label for="ft_active" class="text-sm text-slate-700">Active</label></div>
                 <div class="pt-2 flex justify-end gap-3">
                     <button type="button" onclick="app.closeModal()" class="soft-btn-secondary px-5 py-2.5 text-sm font-semibold">Cancel</button>
@@ -2331,9 +2391,21 @@ app.openEditFaultTypeModal = async function(id) {
 
 app.updateFaultType = async function(e, id) {
     e.preventDefault();
-    const formData = new FormData(e.target);
-    const { error } = await supabaseClient.from('fault_types').update({ name: formData.get('name'), description: formData.get('description'), department_id: formData.get('department_id') || null, active: formData.get('active') === 'on' }).eq('id', id);
+    const form = e.target;
+    const formData = new FormData(form);
+    const { error } = await supabaseClient.from('fault_types').update({
+        name: formData.get('name'), description: formData.get('description'), active: formData.get('active') === 'on'
+    }).eq('id', id);
     if (error) { this.showToast(error.message, 'error'); return; }
+
+    // Update department associations
+    await supabaseClient.from('fault_type_departments').delete().eq('fault_type_id', id);
+    const deptIds = Array.from(form.querySelectorAll('input[name="dept_ids"]:checked')).map(cb => cb.value);
+    if (deptIds.length) {
+        const inserts = deptIds.map(did => ({ fault_type_id: id, department_id: did }));
+        await supabaseClient.from('fault_type_departments').insert(inserts);
+    }
+
     this.showToast('Fault type updated'); this.closeModal(); this.renderSettings();
 };
 
