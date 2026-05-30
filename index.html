@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- CMMS v2.1 - Updated 2026-05-30 - Issues query fixed -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -911,6 +912,7 @@ const app = {
         return p ? p.name : 'Unknown';
     },
     getDowntimeName(id) {
+        if (!id) return '-';
         const d = this.downtimeImpacts.find(x => x.id === id);
         return d ? d.name : 'Unknown';
     },
@@ -1107,14 +1109,40 @@ app.renderDashboard = async function() {
 // ==================== ISSUES & BREAKDOWNS ====================
 app.renderIssues = async function() {
     const content = document.getElementById('page-content');
-    const { data: issues, error } = await supabaseClient
-        .from('issues')
-        .select('*, machines(name), fault_types(name, departments(*)), priorities(name, level, color), profiles(full_name), issue_approvals(*, profiles(full_name))')
-        .order('created_at', { ascending: false });
-    if (error) { console.error(error); content.innerHTML = '<p class="text-red-600">Failed to load issues</p>'; return; }
+    let issues = [];
+    let error = null;
 
-    const breakdowns = (issues || []).filter(i => i.issue_type === 'breakdown');
-    const minors = (issues || []).filter(i => i.issue_type === 'minor');
+    try {
+        // Simple query - no nested relationships that might break
+        const result = await supabaseClient
+            .from('issues')
+            .select('*, machines(name), fault_types(name), priorities(name, level, color), profiles(full_name)')
+            .order('created_at', { ascending: false });
+        issues = result.data || [];
+        error = result.error;
+    } catch (e) {
+        console.error('Issues query exception:', e);
+        error = { message: e.message || 'Query failed' };
+    }
+
+    if (error) {
+        console.error('Issues load error:', error);
+        content.innerHTML = `<div class="fade-in p-10 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-2xl text-red-500"></i>
+            </div>
+            <p class="text-red-600 font-bold text-lg mb-2">Failed to load issues</p>
+            <p class="text-sm text-slate-500 mb-1">${this.escapeHtml(error.message || 'Unknown error')}</p>
+            <p class="text-xs text-slate-400 mt-4 max-w-md mx-auto">This usually means the database schema is outdated. Please re-run the latest supabase-schema.sql in your SQL Editor.</p>
+            <button onclick="app.renderIssues()" class="soft-btn text-white px-5 py-2.5 text-sm font-semibold mt-4">Retry</button>
+        </div>`;
+        return;
+    }
+
+    // Backward compatible: if issue_type doesn't exist, show all as breakdowns
+    const hasIssueType = issues.length > 0 && 'issue_type' in issues[0];
+    const breakdowns = hasIssueType ? issues.filter(i => i.issue_type === 'breakdown') : issues;
+    const minors = hasIssueType ? issues.filter(i => i.issue_type === 'minor') : [];
 
     content.innerHTML = `
         <div class="fade-in space-y-6">
@@ -1305,23 +1333,31 @@ app.createIssue = async function(e, issueType) {
             }
         }
     }
-    const { data, error } = await supabaseClient.from('issues').insert({
+    const insertData = {
         machine_id: formData.get('machine_id'),
         reported_by: this.user.id,
         title: formData.get('title'),
         description: formData.get('description'),
-        issue_type: issueType,
         fault_type_id: formData.get('fault_type_id') || null,
         priority_id: formData.get('priority_id') || null,
         downtime_impact_id: formData.get('downtime_impact_id') || null,
         resolution_photos: photoUrls.length ? photoUrls : null
-    }).select().single();
-    if (error) { this.showToast('Failed to create: ' + error.message, 'error'); }
-    else { this.showToast('Issue reported successfully'); this.closeModal(); this.renderIssues(); }
+    };
+    // Only add issue_type if the column exists (new schema)
+    try {
+        const { data, error } = await supabaseClient.from('issues').insert({...insertData, issue_type: issueType}).select().single();
+        if (error) throw error;
+        this.showToast('Issue reported successfully'); this.closeModal(); this.renderIssues();
+    } catch (err) {
+        // Fallback: try without issue_type (old schema)
+        const { data, error } = await supabaseClient.from('issues').insert(insertData).select().single();
+        if (error) { this.showToast('Failed to create: ' + error.message, 'error'); }
+        else { this.showToast('Issue reported successfully'); this.closeModal(); this.renderIssues(); }
+    }
 };
 
 app.openEditIssueModal = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), downtime_impacts(*)').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*)').eq('id', issueId).single();
     if (!issue) return;
     const machineOptions = this.machines.map(m => `<option value="${m.id}" ${m.id === issue.machine_id ? 'selected' : ''}>${this.escapeHtml(m.name)}</option>`).join('');
     const faultOptions = this.faultTypes.map(f => `<option value="${f.id}" ${f.id === issue.fault_type_id ? 'selected' : ''}>${this.escapeHtml(f.name)}</option>`).join('');
@@ -1397,7 +1433,7 @@ app.deleteIssue = async function(issueId) {
 };
 
 app.openIssueDetail = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), downtime_impacts(*), profiles(*), issue_approvals(*, profiles(*, roles(*)))').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), profiles(*)').eq('id', issueId).single();
     if (!issue) { this.showToast('Issue not found', 'error'); return; }
 
     const machineManagers = this.getMachineManagers(issue.machine_id);
@@ -2015,7 +2051,7 @@ app.generateReport = async function() {
     const to = document.getElementById('report-to').value;
     const machineId = document.getElementById('report-machine').value;
     const deptId = document.getElementById('report-dept').value;
-    let query = supabaseClient.from('issues').select('*, machines(name, location), fault_types(*), priorities(name, color), profiles(full_name), issue_approvals(*, profiles(full_name))').eq('status', 'closed').order('resolved_at', { ascending: false });
+    let query = supabaseClient.from('issues').select('*, machines(name, location), fault_types(*), priorities(name, color), profiles(full_name)').eq('status', 'closed').order('resolved_at', { ascending: false });
     if (from) query = query.gte('resolved_at', from + 'T00:00:00');
     if (to) query = query.lte('resolved_at', to + 'T23:59:59');
     if (machineId) query = query.eq('machine_id', machineId);
@@ -2070,7 +2106,7 @@ app.generateReport = async function() {
 };
 
 app.exportIssueReport = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), downtime_impacts(*), profiles(*), issue_approvals(*, profiles(*))').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), profiles(*)').eq('id', issueId).single();
     if (!issue) return;
     if (!this.canViewReport(issue)) { this.showToast('You do not have permission to view this report', 'error'); return; }
     const managers = this.getMachineManagers(issue.machine_id);
