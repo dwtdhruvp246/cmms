@@ -2639,9 +2639,18 @@ app.renderUsersList = async function() {
                     <p class="text-xs text-slate-500 mt-0.5">Manage users and their access levels</p>
                 </div>
                 ${this.hasPermission('users', 'edit') ? `
-                <button onclick="app.openCreateUserModal()" class="soft-btn text-white px-5 py-2.5 text-sm font-semibold flex items-center gap-2">
-                    <i class="fas fa-user-plus"></i> Add User
-                </button>` : ''}
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="app.downloadUsersTemplate()" class="soft-btn-secondary px-4 py-2.5 text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-download"></i> Template
+                    </button>
+                    <label class="soft-btn-secondary px-4 py-2.5 text-sm font-semibold flex items-center gap-2 cursor-pointer">
+                        <i class="fas fa-upload"></i> Import Excel
+                        <input type="file" accept=".xlsx,.xls" onchange="app.uploadUsersExcel(event)" class="hidden">
+                    </label>
+                    <button onclick="app.openCreateUserModal()" class="soft-btn text-white px-5 py-2.5 text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-user-plus"></i> Add User
+                    </button>` : ''}
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm glass-table">
@@ -2710,9 +2719,18 @@ app.renderRoleMaster = async function() {
                     <h3 class="font-bold text-slate-900 text-lg">Role Master</h3>
                     <p class="text-xs text-slate-500 mt-0.5">Define roles with detailed module permissions</p>
                 </div>
-                <button onclick="app.openCreateRoleModal()" class="soft-btn text-white px-5 py-2.5 text-sm font-semibold flex items-center gap-2">
-                    <i class="fas fa-plus"></i> Add Role
-                </button>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="app.downloadRolesTemplate()" class="soft-btn-secondary px-4 py-2.5 text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-download"></i> Template
+                    </button>
+                    <label class="soft-btn-secondary px-4 py-2.5 text-sm font-semibold flex items-center gap-2 cursor-pointer">
+                        <i class="fas fa-upload"></i> Import Excel
+                        <input type="file" accept=".xlsx,.xls" onchange="app.uploadRolesExcel(event)" class="hidden">
+                    </label>
+                    <button onclick="app.openCreateRoleModal()" class="soft-btn text-white px-5 py-2.5 text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-plus"></i> Add Role
+                    </button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm glass-table">
@@ -3161,6 +3179,25 @@ app.deleteRole = async function(roleId) {
 app.downloadMachinesTemplate = function() {
     const headers = ['Name', 'Description', 'Location', 'Status'];
     const ws = XLSX.utils.aoa_to_sheet([headers, ['Machine A', 'Production line machine', 'Building A Floor 1', 'active']]);
+
+    // Add dropdown for Status column (column D = index 3)
+    ws['!dataValidation'] = {
+        D2: {
+            type: 'list',
+            allowBlank: true,
+            formula1: '"active,inactive,maintenance"',
+            showDropDown: false,
+            showErrorMessage: true,
+            errorTitle: 'Invalid Status',
+            error: 'Please select from the dropdown: active, inactive, or maintenance',
+            errorStyle: 'stop'
+        }
+    };
+    // Apply to entire column D
+    for (let i = 2; i <= 1000; i++) {
+        ws['!dataValidation']['D' + i] = ws['!dataValidation']['D2'];
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Machines');
     XLSX.writeFile(wb, 'Machines_Template.xlsx');
