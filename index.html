@@ -1465,12 +1465,13 @@ app.openIssueDetail = async function(issueId) {
                 ${(() => {
                     const approvers = this.users.filter(u => {
                         if (!u.active) return false;
+                        // Admin does NOT need to approve - exclude from list
+                        if (u.roles?.is_admin) return false;
                         const ft = this.faultTypes.find(f => f.id === issue.fault_type_id);
                         const deptIds = ft ? (ft.fault_type_departments || []).map(fd => fd.department_id) : [];
                         const managers = this.getMachineManagers(issue.machine_id);
                         const isMachineManager = managers.some(m => m.user_id === u.id);
                         if (isMachineManager) return true;
-                        if (u.roles?.is_admin) return true;
                         if (deptIds.length > 0 && deptIds.includes(u.department_id)) return true;
                         return false;
                     });
@@ -1572,6 +1573,10 @@ app.submitResolution = async function(e, issueId) {
 };
 
 app.approveIssue = async function(issueId) {
+    // Check if already approved
+    const { data: existing } = await supabaseClient.from('issue_approvals').select('id').eq('issue_id', issueId).eq('user_id', this.user.id).single();
+    if (existing) { this.showToast('You have already approved this issue', 'info'); return; }
+
     const { error } = await supabaseClient.from('issue_approvals').insert({ issue_id: issueId, user_id: this.user.id });
     if (error) { this.showToast(error.message, 'error'); return; }
     this.showToast('Approval recorded');
