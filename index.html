@@ -1434,7 +1434,7 @@ app.deleteIssue = async function(issueId) {
 };
 
 app.openIssueDetail = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), profiles(*)').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), profiles(*), issue_approvals(*, profiles(*))').eq('id', issueId).single();
     if (!issue) { this.showToast('Issue not found', 'error'); return; }
 
     const machineManagers = this.getMachineManagers(issue.machine_id);
@@ -2121,7 +2121,7 @@ app.generateReport = async function() {
 };
 
 app.exportIssueReport = async function(issueId) {
-    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), profiles(*)').eq('id', issueId).single();
+    const { data: issue } = await supabaseClient.from('issues').select('*, machines(*), fault_types(*), priorities(*), profiles(*), issue_approvals(*, profiles(*))').eq('id', issueId).single();
     if (!issue) return;
     if (!this.canViewReport(issue)) { this.showToast('You do not have permission to view this report', 'error'); return; }
     const managers = this.getMachineManagers(issue.machine_id);
