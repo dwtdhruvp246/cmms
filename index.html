@@ -894,7 +894,7 @@
             <div class="page-title">My Machines</div>
             <div class="page-subtitle">Machines assigned to you</div>
           </div>
-          <button class="btn btn-primary" id="btn-add-my-breakdown" onclick="openAddBreakdownModal(true)">
+          <button class="btn btn-primary hidden" id="btn-add-my-breakdown" onclick="openAddBreakdownModal(true)">
             <span>➕</span> Report Breakdown
           </button>
         </div>
@@ -917,7 +917,7 @@
             <div class="page-title">Breakdowns</div>
             <div class="page-subtitle">Manage all reported breakdowns</div>
           </div>
-          <button class="btn btn-primary" id="btn-add-breakdown" onclick="openAddBreakdownModal(false)">
+          <button class="btn btn-primary hidden" id="btn-add-breakdown" onclick="openAddBreakdownModal(false)">
             <span>➕</span> Report Breakdown
           </button>
         </div>
@@ -952,7 +952,7 @@
             <div class="page-title">Scheduled Maintenance</div>
             <div class="page-subtitle">Plan and track maintenance schedules</div>
           </div>
-          <button class="btn btn-primary" id="btn-add-maintenance" onclick="openAddMaintenanceModal()">
+          <button class="btn btn-primary hidden" id="btn-add-maintenance" onclick="openAddMaintenanceModal()">
             <span>➕</span> Add Maintenance
           </button>
         </div>
@@ -980,7 +980,7 @@
             <div class="page-title">Machinery</div>
             <div class="page-subtitle">Manage all machines and assignments</div>
           </div>
-          <div class="flex gap-3" id="machinery-actions">
+          <div class="flex gap-3 hidden" id="machinery-actions">
             <button class="btn btn-primary" id="btn-add-machine" onclick="openAddMachineModal()">
               <span>➕</span> Add Machine
             </button>
@@ -1098,7 +1098,7 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Departments</h3>
-              <button class="btn btn-primary btn-sm" id="btn-add-dept" onclick="openAddSettingModal('departments')">➕ Add</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-dept" onclick="openAddSettingModal('departments')">➕ Add</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1112,7 +1112,7 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Positions</h3>
-              <button class="btn btn-primary btn-sm" id="btn-add-position" onclick="openAddSettingModal('positions')">➕ Add</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-position" onclick="openAddSettingModal('positions')">➕ Add</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1126,7 +1126,7 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Downtime Impact Levels</h3>
-              <button class="btn btn-primary btn-sm" id="btn-add-downtime" onclick="openAddSettingModal('downtime_impacts')">➕ Add</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-downtime" onclick="openAddSettingModal('downtime_impacts')">➕ Add</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1140,7 +1140,7 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Fault Types</h3>
-              <button class="btn btn-primary btn-sm" id="btn-add-fault" onclick="openAddFaultModal()">➕ Add</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-fault" onclick="openAddFaultModal()">➕ Add</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1154,7 +1154,7 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Priorities</h3>
-              <button class="btn btn-primary btn-sm" id="btn-add-priority" onclick="openAddSettingModal('priorities')">➕ Add</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-priority" onclick="openAddSettingModal('priorities')">➕ Add</button>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1182,7 +1182,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">System Users</h3>
               <div class="flex gap-3">
-              <button class="btn btn-primary btn-sm" id="btn-add-user" onclick="openAddUserModal()">➕ Add User</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-user" onclick="openAddUserModal()">➕ Add User</button>
               <button class="btn btn-soft btn-sm" onclick="downloadTemplate('users')">📥 Template</button>
               <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-users').click()">📤 Upload Excel</button>
               <input type="file" id="upload-users" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('users', this)">
@@ -1210,7 +1210,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Role Master</h3>
               <div class="flex gap-3">
-              <button class="btn btn-primary btn-sm" id="btn-add-role" onclick="openAddRoleModal()">➕ Add Role</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-add-role" onclick="openAddRoleModal()">➕ Add Role</button>
               <button class="btn btn-soft btn-sm" onclick="downloadTemplate('roles')">📥 Template</button>
               <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-roles').click()">📤 Upload Excel</button>
               <input type="file" id="upload-roles" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('roles', this)">
@@ -1379,6 +1379,54 @@
     function canEdit(module) { return !!currentPermissions[module]?.edit; }
     function canDelete(module) { return !!currentPermissions[module]?.delete; }
 
+    function checkPagePermissions(pageId) {
+      const module = MODULES[pageId];
+      if (!module) return;
+
+      // My Machines page
+      if (pageId === 'my-machines') {
+        const btn = document.getElementById('btn-add-my-breakdown');
+        if (btn) { if (canEdit('my_machines')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
+      }
+
+      // Breakdowns page
+      if (pageId === 'breakdowns') {
+        const btn = document.getElementById('btn-add-breakdown');
+        if (btn) { if (canEdit('breakdowns')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
+      }
+
+      // Scheduled Maintenance page
+      if (pageId === 'scheduled-maintenance') {
+        const btn = document.getElementById('btn-add-maintenance');
+        if (btn) { if (canEdit('scheduled_maintenance')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
+      }
+
+      // Machinery page
+      if (pageId === 'machinery') {
+        const actions = document.getElementById('machinery-actions');
+        if (actions) { if (canEdit('machinery')) actions.classList.remove('hidden'); else actions.classList.add('hidden'); }
+      }
+
+      // Reports page - Generate and Print are view-only features, no edit needed
+
+      // Settings page tabs
+      if (pageId === 'settings') {
+        const tabs = ['dept', 'position', 'downtime', 'fault', 'priority'];
+        tabs.forEach(t => {
+          const btn = document.getElementById('btn-add-' + t);
+          if (btn) { if (canEdit('settings')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
+        });
+      }
+
+      // Users & Permissions page
+      if (pageId === 'users-permissions') {
+        const btnUser = document.getElementById('btn-add-user');
+        const btnRole = document.getElementById('btn-add-role');
+        if (btnUser) { if (canEdit('users_permissions')) btnUser.classList.remove('hidden'); else btnUser.classList.add('hidden'); }
+        if (btnRole) { if (canEdit('users_permissions')) btnRole.classList.remove('hidden'); else btnRole.classList.add('hidden'); }
+      }
+    }
+
     function renderSidebar() {
       const nav = document.getElementById('nav-list');
       nav.innerHTML = NAV_ITEMS.map(item => {
@@ -1405,6 +1453,7 @@
     }
 
     async function loadPageData(pageId) {
+      checkPagePermissions(pageId);
       try {
         if (pageId === 'dashboard') await loadDashboard();
         if (pageId === 'my-machines') await loadMyMachines();
@@ -1641,11 +1690,7 @@
     }
 
     async function loadMachinery() {
-      if (!canEdit('machinery')) {
-        document.getElementById('machinery-actions').classList.add('hidden');
-      } else {
-        document.getElementById('machinery-actions').classList.remove('hidden');
-      }
+      
       const { data: machines } = await supabase.from('machines').select('*, manager:manager_id(full_name), operator:operator_id(full_name)').order('name');
       const tbody = document.getElementById('machines-table-body');
       const empty = document.getElementById('machines-empty');
@@ -1780,40 +1825,35 @@
       const { data } = await supabase.from('departments').select('*').order('name');
       const tbody = document.getElementById('dept-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editSetting('departments', '${d.id}', '${d.name}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('departments', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('settings')) document.getElementById('btn-add-dept').classList.add('hidden');
-      else document.getElementById('btn-add-dept').classList.remove('hidden');
+      
     }
 
     async function loadPositions() {
       const { data } = await supabase.from('positions').select('*').order('name');
       const tbody = document.getElementById('position-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editSetting('positions', '${d.id}', '${d.name}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('positions', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('settings')) document.getElementById('btn-add-position').classList.add('hidden');
-      else document.getElementById('btn-add-position').classList.remove('hidden');
+      
     }
 
     async function loadDowntimeImpacts() {
       const { data } = await supabase.from('downtime_impacts').select('*').order('name');
       const tbody = document.getElementById('downtime-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editSetting('downtime_impacts', '${d.id}', '${d.name}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('downtime_impacts', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('settings')) document.getElementById('btn-add-downtime').classList.add('hidden');
-      else document.getElementById('btn-add-downtime').classList.remove('hidden');
+      
     }
 
     async function loadFaultTypes() {
       const { data } = await supabase.from('fault_types').select('*, departments(name)').order('name');
       const tbody = document.getElementById('fault-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${d.departments?.name || 'N/A'}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editFaultType('${d.id}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('fault_types', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('settings')) document.getElementById('btn-add-fault').classList.add('hidden');
-      else document.getElementById('btn-add-fault').classList.remove('hidden');
+      
     }
 
     async function loadPriorities() {
       const { data } = await supabase.from('priorities').select('*').order('level');
       const tbody = document.getElementById('priority-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${d.level}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editPriority('${d.id}', '${d.name}', ${d.level})">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('priorities', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('settings')) document.getElementById('btn-add-priority').classList.add('hidden');
-      else document.getElementById('btn-add-priority').classList.remove('hidden');
+      
     }
 
     function openAddSettingModal(table) {
@@ -1903,16 +1943,14 @@
       const { data: users } = await supabase.from('users').select('*, roles(name), departments(name), positions(name)').order('full_name');
       const tbody = document.getElementById('users-table-body');
       tbody.innerHTML = (users || []).map(u => `<tr><td>${u.full_name}</td><td>${u.username}</td><td>${u.departments?.name || 'N/A'}</td><td>${u.positions?.name || 'N/A'}</td><td>${u.roles?.name || 'N/A'}</td><td>${canEdit('users_permissions') ? `<button class="btn btn-soft btn-xs" onclick="editUser('${u.id}')">Edit</button>` : ''}${canDelete('users_permissions') ? `<button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('users_permissions')) document.getElementById('btn-add-user').classList.add('hidden');
-      else document.getElementById('btn-add-user').classList.remove('hidden');
+      
     }
 
     async function loadRolesTab() {
       const { data: roles } = await supabase.from('roles').select('*').order('name');
       const tbody = document.getElementById('roles-table-body');
       tbody.innerHTML = (roles || []).map(r => `<tr><td style="font-weight:600;">${r.name}</td><td>${r.description || '-'}</td><td>${canEdit('users_permissions') ? `<button class="btn btn-soft btn-xs" onclick="editRolePermissions('${r.id}')">Permissions</button>` : ''}${canEdit('users_permissions') ? `<button class="btn btn-soft btn-xs" onclick="editRole('${r.id}')">Edit</button>` : ''}${canDelete('users_permissions') ? `<button class="btn btn-danger btn-xs" onclick="deleteRole('${r.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      if (!canEdit('users_permissions')) document.getElementById('btn-add-role').classList.add('hidden');
-      else document.getElementById('btn-add-role').classList.remove('hidden');
+      
     }
 
     async function openAddUserModal() {
