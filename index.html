@@ -993,7 +993,7 @@
             <div class="page-title">Machinery</div>
             <div class="page-subtitle">Manage all machines and assignments</div>
           </div>
-          <div class="flex gap-3">
+          <div class="flex gap-3" id="machinery-actions">
             <button class="btn btn-primary" id="btn-add-machine" onclick="openAddMachineModal()">
               <span>➕</span> Add Machine
             </button>
@@ -1655,6 +1655,11 @@
     }
 
     async function loadMachinery() {
+      if (!canEdit('machinery')) {
+        document.getElementById('machinery-actions').classList.add('hidden');
+      } else {
+        document.getElementById('machinery-actions').classList.remove('hidden');
+      }
       const { data: machines } = await supabase.from('machines').select('*, manager:manager_id(full_name), operator:operator_id(full_name)').order('name');
       const tbody = document.getElementById('machines-table-body');
       const empty = document.getElementById('machines-empty');
