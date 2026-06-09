@@ -777,6 +777,7 @@
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
   </style>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <base target="_blank">
 </head>
 <body>
@@ -992,9 +993,18 @@
             <div class="page-title">Machinery</div>
             <div class="page-subtitle">Manage all machines and assignments</div>
           </div>
-          <button class="btn btn-primary" id="btn-add-machine" onclick="openAddMachineModal()">
-            <span>➕</span> Add Machine
-          </button>
+          <div class="flex gap-3">
+            <button class="btn btn-primary" id="btn-add-machine" onclick="openAddMachineModal()">
+              <span>➕</span> Add Machine
+            </button>
+            <button class="btn btn-soft" onclick="downloadTemplate('machinery')">
+              <span>📥</span> Template
+            </button>
+            <button class="btn btn-success" onclick="document.getElementById('upload-machinery').click()">
+              <span>📤</span> Upload Excel
+            </button>
+            <input type="file" id="upload-machinery" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('machinery', this)">
+          </div>
         </div>
         <div class="glass" style="padding: 24px;">
           <div class="table-container">
@@ -1186,7 +1196,12 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">System Users</h3>
+              <div class="flex gap-3">
               <button class="btn btn-primary btn-sm" id="btn-add-user" onclick="openAddUserModal()">➕ Add User</button>
+              <button class="btn btn-soft btn-sm" onclick="downloadTemplate('users')">📥 Template</button>
+              <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-users').click()">📤 Upload Excel</button>
+              <input type="file" id="upload-users" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('users', this)">
+            </div>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1209,7 +1224,12 @@
           <div class="glass" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
               <h3 style="font-size:18px; font-weight:700;">Role Master</h3>
+              <div class="flex gap-3">
               <button class="btn btn-primary btn-sm" id="btn-add-role" onclick="openAddRoleModal()">➕ Add Role</button>
+              <button class="btn btn-soft btn-sm" onclick="downloadTemplate('roles')">📥 Template</button>
+              <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-roles').click()">📤 Upload Excel</button>
+              <input type="file" id="upload-roles" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('roles', this)">
+            </div>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -2115,6 +2135,151 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeModal();
     });
+
+    // ============================================
+    // EXCEL TEMPLATE DOWNLOAD & UPLOAD
+    // ============================================
+    function downloadTemplate(type) {
+      const wb = XLSX.utils.book_new();
+      let ws_data, filename;
+      if (type === 'machinery') {
+        ws_data = [['Machine Name', 'Description', 'Manager Username', 'Operator Username']];
+        filename = 'machinery_template.xlsx';
+      } else if (type === 'roles') {
+        ws_data = [['Role Name', 'Description']];
+        filename = 'roles_template.xlsx';
+      } else if (type === 'users') {
+        ws_data = [['Full Name', 'Username', 'Password', 'Department', 'Position', 'Role', 'Description']];
+        filename = 'users_template.xlsx';
+      }
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, 'Template');
+      XLSX.writeFile(wb, filename);
+    }
+
+    async function handleUpload(type, input) {
+      const file = input.files[0];
+      if (!file) return;
+      input.value = '';
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          if (rows.length < 2) { showToast('File appears empty or has no data rows', 'error'); return; }
+          if (type === 'machinery') await uploadMachinery(rows);
+          else if (type === 'roles') await uploadRoles(rows);
+          else if (type === 'users') await uploadUsers(rows);
+        } catch (err) {
+          console.error(err);
+          showToast('Failed to parse file: ' + err.message, 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    async function uploadMachinery(rows) {
+      // rows[0] = headers
+      const dataRows = rows.slice(1).filter(r => r[0] && String(r[0]).trim());
+      if (dataRows.length === 0) { showToast('No valid machine rows found', 'error'); return; }
+
+      // Fetch all users for username->id mapping
+      const { data: allUsers } = await supabase.from('users').select('id, username');
+      const userMap = {};
+      (allUsers || []).forEach(u => { userMap[u.username] = u.id; });
+
+      const inserts = [];
+      for (const row of dataRows) {
+        const name = String(row[0]).trim();
+        const desc = row[1] ? String(row[1]).trim() : '';
+        const managerUsername = row[2] ? String(row[2]).trim() : '';
+        const operatorUsername = row[3] ? String(row[3]).trim() : '';
+        inserts.push({
+          name,
+          description: desc || null,
+          manager_id: userMap[managerUsername] || null,
+          operator_id: userMap[operatorUsername] || null
+        });
+      }
+      const { error } = await supabase.from('machines').insert(inserts);
+      if (error) { showToast('Upload error: ' + error.message, 'error'); return; }
+      showToast(`${inserts.length} machines uploaded successfully`, 'success');
+      loadMachinery();
+    }
+
+    async function uploadRoles(rows) {
+      const dataRows = rows.slice(1).filter(r => r[0] && String(r[0]).trim());
+      if (dataRows.length === 0) { showToast('No valid role rows found', 'error'); return; }
+      const inserts = dataRows.map(row => ({
+        name: String(row[0]).trim(),
+        description: row[1] ? String(row[1]).trim() : ''
+      }));
+      const { data: newRoles, error } = await supabase.from('roles').insert(inserts).select('id');
+      if (error) { showToast('Upload error: ' + error.message, 'error'); return; }
+
+      // Create default permissions for each new role
+      const modules = Object.values(MODULES);
+      const permInserts = [];
+      (newRoles || []).forEach(r => {
+        modules.forEach(m => permInserts.push({ role_id: r.id, module: m, can_view: false, can_edit: false, can_delete: false }));
+      });
+      if (permInserts.length > 0) await supabase.from('role_permissions').insert(permInserts);
+
+      showToast(`${inserts.length} roles uploaded successfully`, 'success');
+      loadRolesTab();
+    }
+
+    async function uploadUsers(rows) {
+      const dataRows = rows.slice(1).filter(r => r[0] && String(r[0]).trim() && r[1] && String(r[1]).trim());
+      if (dataRows.length === 0) { showToast('No valid user rows found (Full Name and Username required)', 'error'); return; }
+
+      // Fetch lookup tables
+      const [{ data: depts }, { data: positions }, { data: roles }] = await Promise.all([
+        supabase.from('departments').select('id, name'),
+        supabase.from('positions').select('id, name'),
+        supabase.from('roles').select('id, name')
+      ]);
+      const deptMap = {}; (depts || []).forEach(d => deptMap[d.name] = d.id);
+      const posMap = {}; (positions || []).forEach(p => posMap[p.name] = p.id);
+      const roleMap = {}; (roles || []).forEach(r => roleMap[r.name] = r.id);
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const row of dataRows) {
+        const fullname = String(row[0]).trim();
+        const username = String(row[1]).trim();
+        const password = row[2] ? String(row[2]).trim() : '';
+        const deptName = row[3] ? String(row[3]).trim() : '';
+        const posName = row[4] ? String(row[4]).trim() : '';
+        const roleName = row[5] ? String(row[5]).trim() : '';
+        const desc = row[6] ? String(row[6]).trim() : '';
+
+        if (!password || password.length < 6) { failCount++; continue; }
+
+        const email = username + '@cmms.local';
+        const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password });
+        if (authErr || !authData?.user) { failCount++; continue; }
+
+        const { error } = await supabase.from('users').insert({
+          auth_id: authData.user.id,
+          full_name: fullname,
+          username: username,
+          department_id: deptMap[deptName] || null,
+          position_id: posMap[posName] || null,
+          role_id: roleMap[roleName] || null,
+          description: desc || null
+        });
+        if (error) { failCount++; } else { successCount++; }
+      }
+
+      if (failCount > 0) showToast(`${successCount} users uploaded, ${failCount} failed`, 'info');
+      else showToast(`${successCount} users uploaded successfully`, 'success');
+      loadUsersTab();
+    }
+
   </script>
 </body>
 </html>
