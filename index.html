@@ -777,6 +777,7 @@
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -1249,8 +1250,7 @@
     const SUPABASE_URL = 'https://hniwmubfijvlfmftihhl.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXdtdWJmaWp2bGZtZnRpaGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDE2MDYsImV4cCI6MjA5NjU3NzYwNn0.7prKa1OKM43SqO7sjhMSvy-F2Nm0RxeA5qRKnDz492o';
 
-    let supabase = null;
-    let currentUser = null;
+        let currentUser = null;
     let currentPermissions = {};
     let calendarDate = new Date();
     let modalCallback = null;
@@ -1280,7 +1280,7 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       const { createClient } = window.supabase;
-      supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+      window.supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
       updateInternetStatus();
       window.addEventListener('online', updateInternetStatus);
       window.addEventListener('offline', updateInternetStatus);
