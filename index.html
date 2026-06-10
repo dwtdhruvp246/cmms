@@ -1891,6 +1891,15 @@
       loadSettings();
     }
 
+    async function deleteFaultType(id) {
+      if (!confirm('Delete this fault type?')) return;
+      await supabase.from('fault_type_departments').delete().eq('fault_type_id', id);
+      const { error } = await supabase.from('fault_types').delete().eq('id', id);
+      if (error) { showToast(error.message, 'error'); return; }
+      showToast('Fault type deleted', 'success');
+      loadFaultTypes();
+    }
+
     async function openAddFaultModal() {
       const deptOpts = await getDepartmentOptions();
       const html = `<div class="form-group"><label class="form-label">Fault Type Name</label><input type="text" class="form-input" id="fault-name" placeholder="e.g., Motor Failure"></div><div class="form-group"><label class="form-label">Department</label><select class="form-select" id="fault-dept">${deptOpts}</select></div>`;
