@@ -177,6 +177,10 @@
     .badge-machine_running { background: rgba(230,81,0,0.1); color: var(--warning); }
 
 
+    .badge-open { background: rgba(183,28,28,0.1); color: #B71C1C; }
+    .badge-in_progress { background: rgba(230,81,0,0.1); color: #E65100; }
+    .badge-pending_approval { background: rgba(13,71,161,0.1); color: #0D47A1; }
+    .badge-closed { background: rgba(27,94,32,0.1); color: #1B5E20; }
     .badge-scheduled { background: rgba(21,101,192,0.1); color: #1565C0; }
     .badge-completed { background: rgba(27,94,32,0.1); color: var(--success); }
     .bento-grid {
@@ -850,19 +854,19 @@
         </div>
         <div class="bento-grid">
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(183,28,28,0.1); color: #B71C1C;">🛑</div>
-            <div class="card-value" id="tally-stopped">0</div>
-            <div class="card-label">Machine Stopped</div>
+            <div class="card-icon" style="background: rgba(183,28,28,0.1); color: #B71C1C;">⚠️</div>
+            <div class="card-value" id="tally-open">0</div>
+            <div class="card-label">Open Issues</div>
           </div>
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(230,81,0,0.1); color: #E65100;">⚙️</div>
-            <div class="card-value" id="tally-running">0</div>
-            <div class="card-label">Machine Still Running</div>
+            <div class="card-icon" style="background: rgba(230,81,0,0.1); color: #E65100;">🔧</div>
+            <div class="card-value" id="tally-in-progress">0</div>
+            <div class="card-label">In Progress</div>
           </div>
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(21,101,192,0.1); color: #1565C0;">🔧</div>
-            <div class="card-value" id="tally-total">0</div>
-            <div class="card-label">Total Breakdowns</div>
+            <div class="card-icon" style="background: rgba(13,71,161,0.1); color: #0D47A1;">⏳</div>
+            <div class="card-value" id="tally-pending">0</div>
+            <div class="card-label">Pending Approval</div>
           </div>
           <div class="bento-card">
             <div class="card-icon" style="background: rgba(27,94,32,0.1); color: #1B5E20;">📅</div>
@@ -1041,8 +1045,8 @@
               <label class="form-label">Status</label>
               <select class="form-select" id="report-status">
                 <option value="">All Statuses</option>
-                <option value="machine_stopped">Machine Stopped</option>
-                <option value="machine_running">Machine Still Running</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
               </select>
             </div>
           </div>
@@ -1471,13 +1475,13 @@
 
     async function loadDashboard() {
       const today = new Date().toISOString().split('T')[0];
-      const { count: stoppedCount } = await supabase.from('breakdowns').select('*', { count: 'exact', head: true }).eq('status', 'machine_stopped');
-      const { count: runningCount } = await supabase.from('breakdowns').select('*', { count: 'exact', head: true }).eq('status', 'machine_running');
-      const { count: totalCount } = await supabase.from('breakdowns').select('*', { count: 'exact', head: true });
+      const { count: openCount } = await supabase.from('breakdowns').select('*', { count: 'exact', head: true }).eq('status', 'open');
+      const { count: progressCount } = await supabase.from('breakdowns').select('*', { count: 'exact', head: true }).eq('status', 'in_progress');
+      const { count: pendingCount } = await supabase.from('breakdowns').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval');
       const { count: schedCount } = await supabase.from('scheduled_maintenance').select('*', { count: 'exact', head: true }).gte('date', today);
-      document.getElementById('tally-stopped').textContent = stoppedCount || 0;
-      document.getElementById('tally-running').textContent = runningCount || 0;
-      document.getElementById('tally-total').textContent = totalCount || 0;
+      document.getElementById('tally-open').textContent = openCount || 0;
+      document.getElementById('tally-in-progress').textContent = progressCount || 0;
+      document.getElementById('tally-pending').textContent = pendingCount || 0;
       document.getElementById('tally-scheduled').textContent = schedCount || 0;
 
       const { data: upcoming } = await supabase.from('scheduled_maintenance').select('*, machines(name)').gte('date', today).order('date', { ascending: true }).limit(5);
@@ -1493,7 +1497,7 @@
       if (!recent || recent.length === 0) {
         recList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No recent breakdowns.</p></div>';
       } else {
-        recList.innerHTML = recent.map(b => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown fault'}</div></div><div class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Running'}</div></div>`).join('');
+        recList.innerHTML = recent.map(b => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown fault'}</div></div><div class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Open' : 'Machine Running'}</div></div>`).join('');
       }
     }
 
@@ -1513,7 +1517,7 @@
         if (!breakdowns || breakdowns.length === 0) {
           bList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No breakdowns on your machines.</p></div>';
         } else {
-          bList.innerHTML = breakdowns.map(b => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown'}</div></div><div class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</div></div>`).join('');
+          bList.innerHTML = breakdowns.map(b => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown'}</div></div><div class="badge badge-${b.status}">${b.status.replace('_', ' ')}</div></div>`).join('');
         }
         const { data: maintenance } = await supabase.from('scheduled_maintenance').select('*, machines(name)').in('machine_id', machineIds).gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true });
         const mList = document.getElementById('my-maintenance-list');
@@ -1539,7 +1543,7 @@
       } else {
         table.classList.remove('hidden');
         empty.classList.add('hidden');
-        tbody.innerHTML = breakdowns.map(b => `<tr><td>${b.machines?.name || 'N/A'}</td><td>${b.description}</td><td>${b.fault_types?.name || 'N/A'}</td><td>${b.downtime_impacts?.name || 'N/A'}</td><td>${b.priorities?.name || 'N/A'}</td><td><span class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</span></td><td>${new Date(b.created_at).toLocaleDateString()}</td><td>${canEdit('breakdowns') ? `<button class="btn btn-soft btn-xs" onclick="editBreakdown('${b.id}')">Edit</button>` : ''}${canDelete('breakdowns') ? `<button class="btn btn-danger btn-xs" onclick="deleteBreakdown('${b.id}')">Delete</button>` : ''}</td></tr>`).join('');
+        tbody.innerHTML = breakdowns.map(b => `<tr><td>${b.machines?.name || 'N/A'}</td><td>${b.description}</td><td>${b.fault_types?.name || 'N/A'}</td><td>${b.downtime_impacts?.name || 'N/A'}</td><td>${b.priorities?.name || 'N/A'}</td><td><span class="badge badge-${b.status}">${b.status.replace('_', ' ')}</span></td><td>${new Date(b.created_at).toLocaleDateString()}</td><td>${canEdit('breakdowns') ? `<button class="btn btn-soft btn-xs" onclick="editBreakdown('${b.id}')">Edit</button>` : ''}${b.status === 'pending_approval' ? `<button class="btn btn-success btn-xs" onclick="openApprovalModal('${b.id}')">Approve</button>` : ''}${canDelete('breakdowns') ? `<button class="btn btn-danger btn-xs" onclick="deleteBreakdown('${b.id}')">Delete</button>` : ''}</td></tr>`).join('');
       }
     }
 
@@ -1556,7 +1560,7 @@
       const faultOpts = await getFaultOptions();
       const impactOpts = await getImpactOptions();
       const priorityOpts = await getPriorityOptions();
-      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="bd-machine">${machineOpts}</select></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="bd-desc" placeholder="Describe the breakdown..."></textarea></div><div class="form-group"><label class="form-label">Fault Type</label><select class="form-select" id="bd-fault">${faultOpts}</select></div><div class="form-group"><label class="form-label">Downtime Impact</label><select class="form-select" id="bd-impact">${impactOpts}</select></div><div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="bd-priority">${priorityOpts}</select></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="bd-status"><option value="machine_stopped">Machine Stopped</option><option value="machine_running">Machine Still Running</option></select></div>`;
+      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="bd-machine">${machineOpts}</select></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="bd-desc" placeholder="Describe the breakdown..."></textarea></div><div class="form-group"><label class="form-label">Fault Type</label><select class="form-select" id="bd-fault">${faultOpts}</select></div><div class="form-group"><label class="form-label">Downtime Impact</label><select class="form-select" id="bd-impact">${impactOpts}</select></div><div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="bd-priority">${priorityOpts}</select></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="bd-status"><option value="open">Open</option><option value="in_progress">In Progress</option><option value="pending_approval">Pending Approval</option><option value="closed">Closed</option></select></div>`;
       openModal('Report Breakdown', html, async () => {
         const machineId = document.getElementById('bd-machine').value;
         const desc = document.getElementById('bd-desc').value.trim();
@@ -1581,7 +1585,7 @@
       const faultOpts = await getFaultOptions(b.fault_type_id);
       const impactOpts = await getImpactOptions(b.downtime_impact_id);
       const priorityOpts = await getPriorityOptions(b.priority_id);
-      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="bd-machine">${machineOpts}</select></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="bd-desc">${b.description}</textarea></div><div class="form-group"><label class="form-label">Fault Type</label><select class="form-select" id="bd-fault">${faultOpts}</select></div><div class="form-group"><label class="form-label">Downtime Impact</label><select class="form-select" id="bd-impact">${impactOpts}</select></div><div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="bd-priority">${priorityOpts}</select></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="bd-status"><option value="machine_stopped" ${b.status === 'machine_stopped' ? 'selected' : ''}>Machine Stopped</option><option value="machine_running" ${b.status === 'machine_running' ? 'selected' : ''}>Machine Still Running</option></select></div>`;
+      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="bd-machine">${machineOpts}</select></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="bd-desc">${b.description}</textarea></div><div class="form-group"><label class="form-label">Fault Type</label><select class="form-select" id="bd-fault">${faultOpts}</select></div><div class="form-group"><label class="form-label">Downtime Impact</label><select class="form-select" id="bd-impact">${impactOpts}</select></div><div class="form-group"><label class="form-label">Priority</label><select class="form-select" id="bd-priority">${priorityOpts}</select></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="bd-status"><option value="open" ${b.status === 'open' ? 'selected' : ''}>Open</option><option value="in_progress" ${b.status === 'in_progress' ? 'selected' : ''}>In Progress</option><option value="pending_approval" ${b.status === 'pending_approval' ? 'selected' : ''}>Pending Approval</option><option value="closed" ${b.status === 'closed' ? 'selected' : ''}>Closed</option></select></div>`;
       openModal('Edit Breakdown', html, async () => {
         const { error } = await supabase.from('breakdowns').update({ machine_id: document.getElementById('bd-machine').value, description: document.getElementById('bd-desc').value.trim(), fault_type_id: document.getElementById('bd-fault').value || null, downtime_impact_id: document.getElementById('bd-impact').value || null, priority_id: document.getElementById('bd-priority').value || null, status: document.getElementById('bd-status').value }).eq('id', id);
         if (error) { showToast(error.message, 'error'); return; }
@@ -1775,7 +1779,7 @@
       if (!breakdowns || breakdowns.length === 0) {
         rows = '<tr><td colspan="7" style="text-align:center; padding:20px;">No data found for selected filters.</td></tr>';
       } else {
-        rows = breakdowns.map(b => `<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">${b.machines?.name || 'N/A'}</td><td style="padding:10px;">${b.description}</td><td style="padding:10px;">${b.fault_types?.name || 'N/A'}</td><td style="padding:10px;">${b.downtime_impacts?.name || 'N/A'}</td><td style="padding:10px;">${b.priorities?.name || 'N/A'}</td><td style="padding:10px;">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</td><td style="padding:10px;">${new Date(b.created_at).toLocaleDateString()}</td></tr>`).join('');
+        rows = breakdowns.map(b => `<tr style="border-bottom:1px solid #eee;"><td style="padding:10px;">${b.machines?.name || 'N/A'}</td><td style="padding:10px;">${b.description}</td><td style="padding:10px;">${b.fault_types?.name || 'N/A'}</td><td style="padding:10px;">${b.downtime_impacts?.name || 'N/A'}</td><td style="padding:10px;">${b.priorities?.name || 'N/A'}</td><td style="padding:10px;">${b.status.replace('_', ' ')}</td><td style="padding:10px;">${new Date(b.created_at).toLocaleDateString()}</td></tr>`).join('');
       }
       document.getElementById('report-content').innerHTML = `<div style="margin-bottom:20px; padding:15px; background:#f8f9fa; border-radius:8px;"><strong>Filters:</strong> From: ${from || 'All'} | To: ${to || 'All'} | Machine: ${machineId ? breakdowns?.[0]?.machines?.name || 'Selected' : 'All'} | Status: ${status || 'All'}</div><table style="width:100%; border-collapse:collapse; font-size:14px;"><thead style="background:#1a1a2e; color:white;"><tr><th style="padding:12px; text-align:left;">Machine</th><th style="padding:12px; text-align:left;">Description</th><th style="padding:12px; text-align:left;">Fault Type</th><th style="padding:12px; text-align:left;">Impact</th><th style="padding:12px; text-align:left;">Priority</th><th style="padding:12px; text-align:left;">Status</th><th style="padding:12px; text-align:left;">Date</th></tr></thead><tbody>${rows}</tbody></table>`;
       reportDiv.classList.add('active');
@@ -2356,3 +2360,79 @@
   </script>
 </body>
 </html>
+    async function getRequiredApprovers(breakdown) {
+      const approverIds = new Set();
+      if (breakdown.machine_id) {
+        const { data: m } = await supabase.from('machines').select('manager_id, operator_id').eq('id', breakdown.machine_id).single();
+        if (m?.manager_id) approverIds.add(m.manager_id);
+        if (m?.operator_id) approverIds.add(m.operator_id);
+      }
+      if (breakdown.fault_type_id) {
+        const { data: junctions } = await supabase.from('fault_type_departments').select('department_id').eq('fault_type_id', breakdown.fault_type_id);
+        const deptIds = (junctions || []).map(j => j.department_id);
+        if (deptIds.length > 0) {
+          const { data: pos } = await supabase.from('positions').select('id').eq('name', 'Manager').single();
+          if (pos?.id) {
+            const { data: mgrs } = await supabase.from('users').select('id').in('department_id', deptIds).eq('position_id', pos.id);
+            (mgrs || []).forEach(m => approverIds.add(m.id));
+          }
+        }
+      }
+      return Array.from(approverIds);
+    }
+
+    async function openApprovalModal(breakdownId) {
+      const { data: b } = await supabase.from('breakdowns').select('*, machines(name), fault_types(name), users(full_name)').eq('id', breakdownId).single();
+      if (!b) return;
+      const requiredIds = await getRequiredApprovers(b);
+      const { data: approvals } = await supabase.from('breakdown_approvals').select('*, users(full_name)').eq('breakdown_id', breakdownId);
+      const approvedMap = {};
+      (approvals || []).forEach(a => { approvedMap[a.user_id] = a; });
+      let approversHtml = '';
+      if (requiredIds.length === 0) {
+        approversHtml = '<p style="color:#666; font-size:14px;">No specific managers required. Any admin can approve.</p>';
+      } else {
+        const { data: reqUsers } = await supabase.from('users').select('id, full_name').in('id', requiredIds);
+        approversHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+        (reqUsers || []).forEach(u => {
+          const approved = approvedMap[u.id];
+          if (approved) {
+            approversHtml += `<div style="padding:10px; background:rgba(0,255,136,0.08); border-radius:10px; border:1px solid rgba(0,255,136,0.2);"><div style="font-weight:600; color:#1B5E20;">✅ ${u.full_name}</div><div style="font-size:12px; color:#666;">Approved on ${new Date(approved.approved_at).toLocaleString()}</div>${approved.remarks ? `<div style="font-size:13px; margin-top:4px; font-style:italic; color:#333;">"${approved.remarks}"</div>` : ''}</div>`;
+          } else {
+            approversHtml += `<div style="padding:10px; background:rgba(255,170,0,0.08); border-radius:10px; border:1px solid rgba(255,170,0,0.2);"><div style="font-weight:600; color:#E65100;">⏳ ${u.full_name}</div><div style="font-size:12px; color:#666;">Pending approval</div></div>`;
+          }
+        });
+        approversHtml += '</div>';
+      }
+      const hasApproved = approvedMap[currentUser.id];
+      const canApprove = !hasApproved && (requiredIds.length === 0 || requiredIds.includes(currentUser.id) || currentUser.roles?.name === 'Admin');
+      const progress = Object.keys(approvedMap).length + ' / ' + (requiredIds.length || 1) + ' approved';
+      let actionHtml = '';
+      if (canApprove) {
+        actionHtml = `<div class="form-group"><label class="form-label">Your Remarks (optional)</label><textarea class="form-textarea" id="approval-remarks" placeholder="Add any remarks about this approval..."></textarea></div><button class="btn btn-success w-full" onclick="approveBreakdown('${breakdownId}', '${requiredIds.join(',')}')" style="margin-top:12px;"><span>✅</span> Approve Breakdown</button>`;
+      } else if (hasApproved) {
+        actionHtml = `<div style="padding:12px; background:rgba(0,255,136,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ You have already approved this breakdown.</span></div>`;
+      } else {
+        actionHtml = `<div style="padding:12px; background:rgba(255,170,0,0.08); border-radius:10px; text-align:center;"><span style="color:#E65100; font-weight:600;">⏳ You are not authorized to approve this breakdown.</span></div>`;
+      }
+      const html = `<div style="margin-bottom:16px;"><div style="font-size:16px; font-weight:700; margin-bottom:4px;">${b.machines?.name || 'Unknown Machine'}</div><div style="font-size:13px; color:#666;">${b.description}</div><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><span class="badge badge-${b.status}">${b.status.replace('_', ' ')}</span><span class="badge" style="background:rgba(21,101,192,0.1); color:#1565C0;">Progress: ${progress}</span></div></div><div style="margin-bottom:16px;"><div style="font-size:14px; font-weight:600; margin-bottom:8px;">Approval Status</div>${approversHtml}</div>${actionHtml}`;
+      openModal('Breakdown Approval', html, () => {});
+      document.getElementById('modal-footer').classList.add('hidden');
+    }
+
+    async function approveBreakdown(breakdownId, requiredIdsStr) {
+      const remarks = document.getElementById('approval-remarks')?.value.trim() || '';
+      const { error } = await supabase.from('breakdown_approvals').insert({ breakdown_id: breakdownId, user_id: currentUser.id, remarks: remarks || null });
+      if (error) { showToast(error.message, 'error'); return; }
+      showToast('Breakdown approved!', 'success');
+      const requiredIds = requiredIdsStr.split(',').filter(id => id);
+      const { data: allApprovals } = await supabase.from('breakdown_approvals').select('user_id').eq('breakdown_id', breakdownId);
+      const approvedIds = new Set((allApprovals || []).map(a => a.user_id));
+      const allApproved = requiredIds.length === 0 || requiredIds.every(id => approvedIds.has(id));
+      if (allApproved) {
+        await supabase.from('breakdowns').update({ status: 'closed' }).eq('id', breakdownId);
+        showToast('All managers have approved. Breakdown is now closed.', 'success');
+      }
+      closeModal();
+      loadBreakdownsPage();
+    }
