@@ -2541,9 +2541,8 @@
     async function getRequiredApprovers(breakdown) {
       const approverIds = new Set();
       if (breakdown.machine_id) {
-        const { data: m } = await supabase.from('machines').select('manager_id, operator_id').eq('id', breakdown.machine_id).single();
+        const { data: m } = await supabase.from('machines').select('manager_id').eq('id', breakdown.machine_id).single();
         if (m?.manager_id) approverIds.add(m.manager_id);
-        if (m?.operator_id) approverIds.add(m.operator_id);
       }
       if (breakdown.fault_type_id) {
         const { data: roleLinks } = await supabase.from('fault_type_roles').select('role_id').eq('fault_type_id', breakdown.fault_type_id);
