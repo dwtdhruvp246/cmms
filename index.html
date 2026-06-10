@@ -34,7 +34,6 @@
       background-attachment: fixed;
       color: #111111;
       min-height: 100vh;
-      
       overflow-x: hidden;
     }
     .glass {
@@ -175,8 +174,6 @@
     }
     .badge-machine_stopped { background: rgba(183,28,28,0.1); color: #B71C1C; }
     .badge-machine_running { background: rgba(230,81,0,0.1); color: var(--warning); }
-
-
     .badge-open { background: rgba(183,28,28,0.1); color: #B71C1C; }
     .badge-in_progress { background: rgba(230,81,0,0.1); color: #E65100; }
     .badge-pending_approval { background: rgba(13,71,161,0.1); color: #0D47A1; }
@@ -241,7 +238,6 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    /* bento-hero removed — welcome moved to page header */
     .sidebar {
       width: 280px;
       height: 100vh;
@@ -731,7 +727,6 @@
       .sidebar.open { transform: translateX(0); }
       .main-content { margin-left: 0; padding: 80px 16px 24px; }
       .bento-grid { grid-template-columns: 1fr; }
-      
       .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
       .login-card { padding: 32px 24px; }
       .modal-container { padding: 24px; }
@@ -776,7 +771,6 @@
     @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
   </style>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<base target="_blank">
 </head>
 <body>
 
@@ -1259,7 +1253,7 @@
     const SUPABASE_URL = 'https://hniwmubfijvlfmftihhl.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXdtdWJmaWp2bGZtZnRpaGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDE2MDYsImV4cCI6MjA5NjU3NzYwNn0.7prKa1OKM43SqO7sjhMSvy-F2Nm0RxeA5qRKnDz492o';
 
-        let currentUser = null;
+    let currentUser = null;
     let currentPermissions = {};
     let calendarDate = new Date();
     let modalCallback = null;
@@ -1387,33 +1381,26 @@
       const module = MODULES[pageId];
       if (!module) return;
 
-      // My Machines page
       if (pageId === 'my-machines') {
         const btn = document.getElementById('btn-add-my-breakdown');
         if (btn) { if (canEdit('my_machines')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
       }
 
-      // Breakdowns page
       if (pageId === 'breakdowns') {
         const btn = document.getElementById('btn-add-breakdown');
         if (btn) { if (canEdit('breakdowns')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
       }
 
-      // Scheduled Maintenance page
       if (pageId === 'scheduled-maintenance') {
         const btn = document.getElementById('btn-add-maintenance');
         if (btn) { if (canEdit('scheduled_maintenance')) btn.classList.remove('hidden'); else btn.classList.add('hidden'); }
       }
 
-      // Machinery page
       if (pageId === 'machinery') {
         const actions = document.getElementById('machinery-actions');
         if (actions) { if (canEdit('machinery')) actions.classList.remove('hidden'); else actions.classList.add('hidden'); }
       }
 
-      // Reports page - Generate and Print are view-only features, no edit needed
-
-      // Settings page tabs
       if (pageId === 'settings') {
         const tabs = ['dept', 'position', 'downtime', 'fault', 'priority'];
         tabs.forEach(t => {
@@ -1422,7 +1409,6 @@
         });
       }
 
-      // Users & Permissions page
       if (pageId === 'users-permissions') {
         const btnUser = document.getElementById('btn-add-user');
         const btnRole = document.getElementById('btn-add-role');
@@ -1475,32 +1461,19 @@
 
     async function loadDashboard() {
       const today = new Date().toISOString().split('T')[0];
-
-      // Fetch all breakdowns with their approvals
       const { data: allBreakdowns } = await supabase.from('breakdowns').select('id, status, machine_id, fault_type_id');
-      const { data: allApprovals } = await supabase.from('breakdown_approvals').select('breakdown_id, user_id');
-
+      const { data: allApprovals } = await supabase.from('breakdown_approvals').select('breakdown_id, type');
       let openCount = 0, progressCount = 0, pendingCount = 0, closedCount = 0;
 
       for (const b of (allBreakdowns || [])) {
         const bdApprovals = (allApprovals || []).filter(a => a.breakdown_id === b.id);
-        const approvedCount = bdApprovals.length;
-
-        // Get required approvers count
         const requiredIds = await getRequiredApprovers(b);
-        const requiredCount = requiredIds.length || 1; // at least 1 approver needed
-
-        if (approvedCount === 0) {
-          // No approvals yet
-          if (b.status === 'machine_stopped') openCount++;
-          else progressCount++;
-        } else if (approvedCount < requiredCount) {
-          // Some approvals but not all
-          pendingCount++;
-        } else {
-          // All required approvals complete
-          closedCount++;
-        }
+        const requiredCount = requiredIds.length || 1;
+        const stage = getBreakdownWorkflowStage(b, bdApprovals, requiredCount);
+        if (stage === 'open') openCount++;
+        else if (stage === 'in_progress') progressCount++;
+        else if (stage === 'pending_approval') pendingCount++;
+        else if (stage === 'closed') closedCount++;
       }
 
       const { count: schedCount } = await supabase.from('scheduled_maintenance').select('*', { count: 'exact', head: true }).gte('date', today);
@@ -1522,7 +1495,11 @@
       if (!recent || recent.length === 0) {
         recList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No recent breakdowns.</p></div>';
       } else {
-        recList.innerHTML = recent.map(b => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown fault'}</div></div><div class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Open' : 'Machine Running'}</div></div>`).join('');
+        recList.innerHTML = recent.map(b => {
+          const stage = b.status === 'machine_stopped' ? 'open' : 'in_progress';
+          const stageLabel = stage === 'open' ? 'Open' : 'In Progress';
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewBreakdown('${b.id}')"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown fault'}</div></div><div class="badge badge-${stage}">${stageLabel}</div></div>`;
+        }).join('');
       }
     }
 
@@ -1542,7 +1519,11 @@
         if (!breakdowns || breakdowns.length === 0) {
           bList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No breakdowns on your machines.</p></div>';
         } else {
-          bList.innerHTML = breakdowns.map(b => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown'}</div></div><div class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</div></div>`).join('');
+          bList.innerHTML = breakdowns.map(b => {
+            const stage = b.status === 'machine_stopped' ? 'open' : 'in_progress';
+            const stageLabel = stage === 'open' ? 'Open' : 'In Progress';
+            return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewBreakdown('${b.id}')"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown'}</div></div><div class="badge badge-${stage}">${stageLabel}</div></div>`;
+          }).join('');
         }
         const { data: maintenance } = await supabase.from('scheduled_maintenance').select('*, machines(name)').in('machine_id', machineIds).gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true });
         const mList = document.getElementById('my-maintenance-list');
@@ -1568,7 +1549,17 @@
       } else {
         table.classList.remove('hidden');
         empty.classList.add('hidden');
-        tbody.innerHTML = breakdowns.map(b => `<tr><td>${b.machines?.name || 'N/A'}</td><td>${b.description}</td><td>${b.fault_types?.name || 'N/A'}</td><td>${b.downtime_impacts?.name || 'N/A'}</td><td>${b.priorities?.name || 'N/A'}</td><td><span class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</span></td><td>${new Date(b.created_at).toLocaleDateString()}</td><td>${canEdit('breakdowns') ? `<button class="btn btn-soft btn-xs" onclick="editBreakdown('${b.id}')">Edit</button>` : ''}${b.status === 'pending_approval' ? `<button class="btn btn-success btn-xs" onclick="openApprovalModal('${b.id}')">Approve</button>` : ''}${canDelete('breakdowns') ? `<button class="btn btn-danger btn-xs" onclick="deleteBreakdown('${b.id}')">Delete</button>` : ''}</td></tr>`).join('');
+        const bIds = breakdowns.map(b => b.id);
+        const { data: allApprovals } = await supabase.from('breakdown_approvals').select('breakdown_id, type').in('breakdown_id', bIds);
+        const rows = await Promise.all(breakdowns.map(async b => {
+          const bdApprovals = (allApprovals || []).filter(a => a.breakdown_id === b.id);
+          const requiredIds = await getRequiredApprovers(b);
+          const requiredCount = requiredIds.length || 1;
+          const stage = getBreakdownWorkflowStage(b, bdApprovals, requiredCount);
+          const stageLabel = stage === 'open' ? 'Open' : stage === 'in_progress' ? 'In Progress' : stage === 'pending_approval' ? 'Pending Approval' : 'Closed';
+          return `<tr><td>${b.machines?.name || 'N/A'}</td><td>${b.description}</td><td>${b.fault_types?.name || 'N/A'}</td><td>${b.downtime_impacts?.name || 'N/A'}</td><td>${b.priorities?.name || 'N/A'}</td><td><span class="badge badge-${stage}\">${stageLabel}</span><div style=\"font-size:11px; color:#666; margin-top:2px;\">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</div></td><td>${new Date(b.created_at).toLocaleDateString()}</td><td><button class=\"btn btn-soft btn-xs\" onclick=\"viewBreakdown('${b.id}')\">👁️ View</button>${canEdit('breakdowns') ? `<button class=\"btn btn-soft btn-xs\" onclick=\"editBreakdown('${b.id}')\">Edit</button>` : ''}${canDelete('breakdowns') ? `<button class=\"btn btn-danger btn-xs\" onclick=\"deleteBreakdown('${b.id}')\">Delete</button>` : ''}</td></tr>`;
+        }));
+        tbody.innerHTML = rows.join('');
       }
     }
 
@@ -1634,7 +1625,7 @@
       if (!list || list.length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No scheduled maintenance.</p></div>';
       } else {
-        container.innerHTML = list.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.date} at ${m.time} &bull; ${m.description || 'No description'}</div></div><div style="display:flex; gap:8px; align-items:center;"><span class="badge badge-${m.status}">${m.status}</span>${canEdit('scheduled_maintenance') ? `<button class="btn btn-soft btn-xs" onclick="editMaintenance('${m.id}')">Edit</button>` : ''}${canDelete('scheduled_maintenance') ? `<button class="btn btn-danger btn-xs" onclick="deleteMaintenance('${m.id}')">Delete</button>` : ''}</div></div>`).join('');
+        container.innerHTML = list.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.date} at ${m.time} &bull; ${m.description || 'No description'}</div></div><div style="display:flex; gap:8px; align-items:center;"><span class="badge badge-${m.status}">${m.status}</span><button class="btn btn-soft btn-xs" onclick="viewMaintenance('${m.id}')">👁️ View</button>${canEdit('scheduled_maintenance') ? `<button class="btn btn-soft btn-xs" onclick="editMaintenance('${m.id}')">Edit</button>` : ''}${canDelete('scheduled_maintenance') ? `<button class="btn btn-danger btn-xs" onclick="deleteMaintenance('${m.id}')">Delete</button>` : ''}</div></div>`).join('');
       }
     }
 
@@ -1719,7 +1710,6 @@
     }
 
     async function loadMachinery() {
-      
       const { data: machines } = await supabase.from('machines').select('*, manager:manager_id(full_name), operator:operator_id(full_name)').order('name');
       const tbody = document.getElementById('machines-table-body');
       const empty = document.getElementById('machines-empty');
@@ -1854,35 +1844,36 @@
       const { data } = await supabase.from('departments').select('*').order('name');
       const tbody = document.getElementById('dept-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editSetting('departments', '${d.id}', '${d.name}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('departments', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
     }
 
     async function loadPositions() {
       const { data } = await supabase.from('positions').select('*').order('name');
       const tbody = document.getElementById('position-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editSetting('positions', '${d.id}', '${d.name}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('positions', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
     }
 
     async function loadDowntimeImpacts() {
       const { data } = await supabase.from('downtime_impacts').select('*').order('name');
       const tbody = document.getElementById('downtime-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editSetting('downtime_impacts', '${d.id}', '${d.name}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('downtime_impacts', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
     }
 
     async function loadFaultTypes() {
-      const { data } = await supabase.from('fault_types').select('*, departments(name)').order('name');
+      const { data: faultTypes } = await supabase.from('fault_types').select('id, name').order('name');
+      const { data: junctions } = await supabase.from('fault_type_departments').select('fault_type_id, departments(name)');
+      const deptMap = {};
+      (junctions || []).forEach(j => {
+        if (!deptMap[j.fault_type_id]) deptMap[j.fault_type_id] = [];
+        deptMap[j.fault_type_id].push(j.departments?.name || 'N/A');
+      });
       const tbody = document.getElementById('fault-table-body');
-      tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${d.departments?.name || 'N/A'}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editFaultType('${d.id}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('fault_types', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
+      tbody.innerHTML = (faultTypes || []).map(d => `<tr><td>${d.name}</td><td>${deptMap[d.id]?.join(', ') || 'N/A'}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editFaultType('${d.id}')">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteFaultType('${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
     }
 
     async function loadPriorities() {
       const { data } = await supabase.from('priorities').select('*').order('level');
       const tbody = document.getElementById('priority-table-body');
       tbody.innerHTML = (data || []).map(d => `<tr><td>${d.name}</td><td>${d.level}</td><td>${canEdit('settings') ? `<button class="btn btn-soft btn-xs" onclick="editPriority('${d.id}', '${d.name}', ${d.level})">Edit</button>` : ''}${canDelete('settings') ? `<button class="btn btn-danger btn-xs" onclick="deleteSetting('priorities', '${d.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
     }
 
     function openAddSettingModal(table) {
@@ -1923,6 +1914,7 @@
     async function deleteFaultType(id) {
       if (!confirm('Delete this fault type?')) return;
       await supabase.from('fault_type_departments').delete().eq('fault_type_id', id);
+      await supabase.from('fault_type_roles').delete().eq('fault_type_id', id);
       const { error } = await supabase.from('fault_types').delete().eq('id', id);
       if (error) { showToast(error.message, 'error'); return; }
       showToast('Fault type deleted', 'success');
@@ -1930,21 +1922,32 @@
     }
 
     async function openAddFaultModal() {
-      const { data: depts } = await supabase.from('departments').select('id, name').order('name');
+      const [{ data: depts }, { data: roles }] = await Promise.all([
+        supabase.from('departments').select('id, name').order('name'),
+        supabase.from('roles').select('id, name').order('name')
+      ]);
       let deptChecks = '';
       (depts || []).forEach(d => {
         deptChecks += `<label style="display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer;"><input type="checkbox" value="${d.id}" class="fault-dept-check" style="width:18px; height:18px; cursor:pointer;"><span>${d.name}</span></label>`;
       });
-      const html = `<div class="form-group"><label class="form-label">Fault Type Name</label><input type="text" class="form-input" id="fault-name" placeholder="e.g., Motor Failure"></div><div class="form-group"><label class="form-label">Departments (select all that apply)</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${deptChecks}</div></div>`;
+      let roleChecks = '';
+      (roles || []).forEach(r => {
+        roleChecks += `<label style="display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer;"><input type="checkbox" value="${r.id}" class="fault-role-check" style="width:18px; height:18px; cursor:pointer;"><span>${r.name}</span></label>`;
+      });
+      const html = `<div class="form-group"><label class="form-label">Fault Type Name</label><input type="text" class="form-input" id="fault-name" placeholder="e.g., Motor Failure"></div><div class="form-group"><label class="form-label">Departments (select all that apply)</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${deptChecks}</div></div><div class="form-group"><label class="form-label">Approval Roles (who must approve breakdowns of this type)</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${roleChecks}</div></div>`;
       openModal('Add Fault Type', html, async () => {
         const name = document.getElementById('fault-name').value.trim();
         if (!name) { showToast('Name is required', 'error'); return; }
         const { data: newFault, error } = await supabase.from('fault_types').insert({ name }).select('id').single();
         if (error) { showToast(error.message, 'error'); return; }
-        const checked = document.querySelectorAll('.fault-dept-check:checked');
-        const inserts = [];
-        checked.forEach(cb => inserts.push({ fault_type_id: newFault.id, department_id: cb.value }));
-        if (inserts.length > 0) await supabase.from('fault_type_departments').insert(inserts);
+        const deptChecked = document.querySelectorAll('.fault-dept-check:checked');
+        const deptInserts = [];
+        deptChecked.forEach(cb => deptInserts.push({ fault_type_id: newFault.id, department_id: cb.value }));
+        if (deptInserts.length > 0) await supabase.from('fault_type_departments').insert(deptInserts);
+        const roleChecked = document.querySelectorAll('.fault-role-check:checked');
+        const roleInserts = [];
+        roleChecked.forEach(cb => roleInserts.push({ fault_type_id: newFault.id, role_id: cb.value }));
+        if (roleInserts.length > 0) await supabase.from('fault_type_roles').insert(roleInserts);
         showToast('Fault type added', 'success');
         loadFaultTypes();
       });
@@ -1953,23 +1956,40 @@
     async function editFaultType(id) {
       const { data: f } = await supabase.from('fault_types').select('*').eq('id', id).single();
       if (!f) return;
-      const { data: existingJunctions } = await supabase.from('fault_type_departments').select('department_id').eq('fault_type_id', id);
-      const existingDeptIds = new Set((existingJunctions || []).map(j => j.department_id));
-      const { data: depts } = await supabase.from('departments').select('id, name').order('name');
+      const [{ data: existingDepts }, { data: existingRoles }] = await Promise.all([
+        supabase.from('fault_type_departments').select('department_id').eq('fault_type_id', id),
+        supabase.from('fault_type_roles').select('role_id').eq('fault_type_id', id)
+      ]);
+      const existingDeptIds = new Set((existingDepts || []).map(j => j.department_id));
+      const existingRoleIds = new Set((existingRoles || []).map(j => j.role_id));
+      const [{ data: depts }, { data: roles }] = await Promise.all([
+        supabase.from('departments').select('id, name').order('name'),
+        supabase.from('roles').select('id, name').order('name')
+      ]);
       let deptChecks = '';
       (depts || []).forEach(d => {
         const checked = existingDeptIds.has(d.id) ? 'checked' : '';
         deptChecks += `<label style="display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer;"><input type="checkbox" value="${d.id}" class="fault-dept-check" style="width:18px; height:18px; cursor:pointer;" ${checked}><span>${d.name}</span></label>`;
       });
-      const html = `<div class="form-group"><label class="form-label">Fault Type Name</label><input type="text" class="form-input" id="fault-name" value="${f.name}"></div><div class="form-group"><label class="form-label">Departments (select all that apply)</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${deptChecks}</div></div>`;
+      let roleChecks = '';
+      (roles || []).forEach(r => {
+        const checked = existingRoleIds.has(r.id) ? 'checked' : '';
+        roleChecks += `<label style="display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer;"><input type="checkbox" value="${r.id}" class="fault-role-check" style="width:18px; height:18px; cursor:pointer;" ${checked}><span>${r.name}</span></label>`;
+      });
+      const html = `<div class="form-group"><label class="form-label">Fault Type Name</label><input type="text" class="form-input" id="fault-name" value="${f.name}"></div><div class="form-group"><label class="form-label">Departments (select all that apply)</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${deptChecks}</div></div><div class="form-group"><label class="form-label">Approval Roles (who must approve breakdowns of this type)</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${roleChecks}</div></div>`;
       openModal('Edit Fault Type', html, async () => {
         const { error } = await supabase.from('fault_types').update({ name: document.getElementById('fault-name').value.trim() }).eq('id', id);
         if (error) { showToast(error.message, 'error'); return; }
         await supabase.from('fault_type_departments').delete().eq('fault_type_id', id);
-        const checked = document.querySelectorAll('.fault-dept-check:checked');
-        const inserts = [];
-        checked.forEach(cb => inserts.push({ fault_type_id: id, department_id: cb.value }));
-        if (inserts.length > 0) await supabase.from('fault_type_departments').insert(inserts);
+        const deptChecked = document.querySelectorAll('.fault-dept-check:checked');
+        const deptInserts = [];
+        deptChecked.forEach(cb => deptInserts.push({ fault_type_id: id, department_id: cb.value }));
+        if (deptInserts.length > 0) await supabase.from('fault_type_departments').insert(deptInserts);
+        await supabase.from('fault_type_roles').delete().eq('fault_type_id', id);
+        const roleChecked = document.querySelectorAll('.fault-role-check:checked');
+        const roleInserts = [];
+        roleChecked.forEach(cb => roleInserts.push({ fault_type_id: id, role_id: cb.value }));
+        if (roleInserts.length > 0) await supabase.from('fault_type_roles').insert(roleInserts);
         showToast('Fault type updated', 'success');
         loadFaultTypes();
       });
@@ -2001,14 +2021,12 @@
       const { data: users } = await supabase.from('users').select('*, roles(name), departments(name), positions(name)').order('full_name');
       const tbody = document.getElementById('users-table-body');
       tbody.innerHTML = (users || []).map(u => `<tr><td>${u.full_name}</td><td>${u.username}</td><td>${u.departments?.name || 'N/A'}</td><td>${u.positions?.name || 'N/A'}</td><td>${u.roles?.name || 'N/A'}</td><td>${canEdit('users_permissions') ? `<button class="btn btn-soft btn-xs" onclick="editUser('${u.id}')">Edit</button>` : ''}${canDelete('users_permissions') ? `<button class="btn btn-danger btn-xs" onclick="deleteUser('${u.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
     }
 
     async function loadRolesTab() {
       const { data: roles } = await supabase.from('roles').select('*').order('name');
       const tbody = document.getElementById('roles-table-body');
       tbody.innerHTML = (roles || []).map(r => `<tr><td style="font-weight:600;">${r.name}</td><td>${r.description || '-'}</td><td>${canEdit('users_permissions') ? `<button class="btn btn-soft btn-xs" onclick="editRolePermissions('${r.id}')">Permissions</button>` : ''}${canEdit('users_permissions') ? `<button class="btn btn-soft btn-xs" onclick="editRole('${r.id}')">Edit</button>` : ''}${canDelete('users_permissions') ? `<button class="btn btn-danger btn-xs" onclick="deleteRole('${r.id}')">Delete</button>` : ''}</td></tr>`).join('');
-      
     }
 
     async function openAddUserModal() {
@@ -2283,15 +2301,11 @@
     }
 
     async function uploadMachinery(rows) {
-      // rows[0] = headers
       const dataRows = rows.slice(1).filter(r => r[0] && String(r[0]).trim());
       if (dataRows.length === 0) { showToast('No valid machine rows found', 'error'); return; }
-
-      // Fetch all users for username->id mapping
       const { data: allUsers } = await supabase.from('users').select('id, username');
       const userMap = {};
       (allUsers || []).forEach(u => { userMap[u.username] = u.id; });
-
       const inserts = [];
       for (const row of dataRows) {
         const name = String(row[0]).trim();
@@ -2320,15 +2334,12 @@
       }));
       const { data: newRoles, error } = await supabase.from('roles').insert(inserts).select('id');
       if (error) { showToast('Upload error: ' + error.message, 'error'); return; }
-
-      // Create default permissions for each new role
       const modules = Object.values(MODULES);
       const permInserts = [];
       (newRoles || []).forEach(r => {
         modules.forEach(m => permInserts.push({ role_id: r.id, module: m, can_view: false, can_edit: false, can_delete: false }));
       });
       if (permInserts.length > 0) await supabase.from('role_permissions').insert(permInserts);
-
       showToast(`${inserts.length} roles uploaded successfully`, 'success');
       loadRolesTab();
     }
@@ -2336,8 +2347,6 @@
     async function uploadUsers(rows) {
       const dataRows = rows.slice(1).filter(r => r[0] && String(r[0]).trim() && r[1] && String(r[1]).trim());
       if (dataRows.length === 0) { showToast('No valid user rows found (Full Name and Username required)', 'error'); return; }
-
-      // Fetch lookup tables
       const [{ data: depts }, { data: positions }, { data: roles }] = await Promise.all([
         supabase.from('departments').select('id, name'),
         supabase.from('positions').select('id, name'),
@@ -2346,10 +2355,8 @@
       const deptMap = {}; (depts || []).forEach(d => deptMap[d.name] = d.id);
       const posMap = {}; (positions || []).forEach(p => posMap[p.name] = p.id);
       const roleMap = {}; (roles || []).forEach(r => roleMap[r.name] = r.id);
-
       let successCount = 0;
       let failCount = 0;
-
       for (const row of dataRows) {
         const fullname = String(row[0]).trim();
         const username = String(row[1]).trim();
@@ -2358,13 +2365,10 @@
         const posName = row[4] ? String(row[4]).trim() : '';
         const roleName = row[5] ? String(row[5]).trim() : '';
         const desc = row[6] ? String(row[6]).trim() : '';
-
         if (!password || password.length < 6) { failCount++; continue; }
-
         const email = username + '@cmms.local';
         const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password });
         if (authErr || !authData?.user) { failCount++; continue; }
-
         const { error } = await supabase.from('users').insert({
           auth_id: authData.user.id,
           full_name: fullname,
@@ -2376,12 +2380,89 @@
         });
         if (error) { failCount++; } else { successCount++; }
       }
-
       if (failCount > 0) showToast(`${successCount} users uploaded, ${failCount} failed`, 'info');
       else showToast(`${successCount} users uploaded successfully`, 'success');
       loadUsersTab();
     }
 
+    // ============================================
+    // VIEW & APPROVAL WORKFLOW
+    // ============================================
+    async function viewBreakdown(id) {
+      const { data: b } = await supabase.from('breakdowns').select('*, machines(name), fault_types(name), downtime_impacts(name), priorities(name), users(full_name)').eq('id', id).single();
+      if (!b) return;
+      const requiredIds = await getRequiredApprovers(b);
+      const requiredCount = requiredIds.length || 1;
+      const { data: approvals } = await supabase.from('breakdown_approvals').select('*, users(full_name)').eq('breakdown_id', id);
+      const ack = (approvals || []).find(a => a.type === 'acknowledge');
+      const finalApprovals = (approvals || []).filter(a => a.type === 'approve');
+      const approvedIds = new Set(finalApprovals.map(a => a.user_id));
+      const stage = getBreakdownWorkflowStage(b, approvals || [], requiredCount);
+      const stageLabel = stage === 'open' ? 'Open' : stage === 'in_progress' ? 'In Progress' : stage === 'pending_approval' ? 'Pending Approval' : 'Closed';
+
+      const isRequired = requiredIds.includes(currentUser.id);
+      const canAcknowledge = !ack && isRequired && stage === 'open';
+      const canApprove = ack && !approvedIds.has(currentUser.id) && isRequired && stage !== 'closed';
+
+      let actionsHtml = '';
+      if (canAcknowledge) {
+        actionsHtml += `<button class="btn btn-primary w-full mb-3" onclick="acknowledgeBreakdown('${id}')"><span>✋</span> Acknowledge Breakdown</button>`;
+      } else if (!isRequired && !ack) {
+        actionsHtml += `<div style="padding:12px; background:rgba(255,170,0,0.08); border-radius:10px; text-align:center;"><span style="color:#E65100; font-weight:600;">⏳ You are not authorized to approve this breakdown.</span></div>`;
+      }
+
+      if (canApprove) {
+        actionsHtml += `<div class="form-group"><label class="form-label">Approval Remarks (optional)</label><textarea class="form-textarea" id="approval-remarks" placeholder="Add remarks about this approval..."></textarea></div><button class="btn btn-success w-full" onclick="approveBreakdown('${id}', '${requiredIds.join(',')}')"><span>✅</span> Completed Breakdown Approval</button>`;
+      } else if (approvedIds.has(currentUser.id)) {
+        actionsHtml += `<div style="padding:12px; background:rgba(0,255,136,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ You have already approved this breakdown.</span></div>`;
+      }
+
+      if (!actionsHtml && stage === 'closed') {
+        actionsHtml = `<div style="padding:12px; background:rgba(0,255,136,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ This breakdown is closed. All managers have approved.</span></div>`;
+      }
+
+      let approversHtml = '';
+      if (requiredIds.length === 0) {
+        approversHtml = '<p style="color:#666; font-size:14px;">No specific approvers configured.</p>';
+      } else {
+        const { data: reqUsers } = await supabase.from('users').select('id, full_name').in('id', requiredIds);
+        approversHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
+        (reqUsers || []).forEach(u => {
+          const ackBy = ack?.user_id === u.id ? ack : null;
+          const appBy = finalApprovals.find(a => a.user_id === u.id);
+          if (appBy) {
+            approversHtml += `<div style="padding:10px; background:rgba(0,255,136,0.08); border-radius:10px; border:1px solid rgba(0,255,136,0.2);"><div style="font-weight:600; color:#1B5E20;">✅ ${u.full_name}</div><div style="font-size:12px; color:#666;">Approved on ${new Date(appBy.approved_at).toLocaleString()}</div>${appBy.remarks ? `<div style="font-size:13px; margin-top:4px; font-style:italic; color:#333;">"${appBy.remarks}"</div>` : ''}</div>`;
+          } else if (ackBy) {
+            approversHtml += `<div style="padding:10px; background:rgba(21,101,192,0.08); border-radius:10px; border:1px solid rgba(21,101,192,0.2);"><div style="font-weight:600; color:#1565C0;">✋ ${u.full_name}</div><div style="font-size:12px; color:#666;">Acknowledged on ${new Date(ackBy.approved_at).toLocaleString()}</div></div>`;
+          } else {
+            approversHtml += `<div style="padding:10px; background:rgba(255,170,0,0.08); border-radius:10px; border:1px solid rgba(255,170,0,0.2);"><div style="font-weight:600; color:#E65100;">⏳ ${u.full_name}</div><div style="font-size:12px; color:#666;">Pending approval</div></div>`;
+          }
+        });
+        approversHtml += '</div>';
+      }
+
+      const html = `<div style="margin-bottom:16px;"><div style="font-size:16px; font-weight:700; margin-bottom:4px;">${b.machines?.name || 'Unknown Machine'}</div><div style="font-size:13px; color:#666;">${b.description}</div><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><span class="badge badge-${stage}">${stageLabel}</span><span class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</span></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;"><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Reported By</div><div style="font-weight:600; font-size:14px;">${b.users?.full_name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Reported At</div><div style="font-weight:600; font-size:14px;">${new Date(b.created_at).toLocaleString()}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Fault Type</div><div style="font-weight:600; font-size:14px;">${b.fault_types?.name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Impact</div><div style="font-weight:600; font-size:14px;">${b.downtime_impacts?.name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Priority</div><div style="font-weight:600; font-size:14px;">${b.priorities?.name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Updated</div><div style="font-weight:600; font-size:14px;">${new Date(b.updated_at).toLocaleString()}</div></div></div><div style="margin-bottom:16px;"><div style="font-size:14px; font-weight:600; margin-bottom:8px;">Approval Status (${finalApprovals.length} / ${requiredCount} final approvals)</div>${approversHtml}</div><div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:16px;">${actionsHtml}</div>`;
+      openModal('Breakdown Details', html, () => {});
+      document.getElementById('modal-footer').classList.add('hidden');
+    }
+
+    async function acknowledgeBreakdown(id) {
+      const { error } = await supabase.from('breakdown_approvals').insert({ breakdown_id: id, user_id: currentUser.id, type: 'acknowledge', remarks: null });
+      if (error) { showToast(error.message, 'error'); return; }
+      await supabase.from('breakdowns').update({ status: 'machine_running' }).eq('id', id);
+      showToast('Breakdown acknowledged. Status updated to In Progress.', 'success');
+      closeModal();
+      loadBreakdownsPage();
+      loadDashboard();
+    }
+
+    async function viewMaintenance(id) {
+      const { data: m } = await supabase.from('scheduled_maintenance').select('*, machines(name), users(full_name)').eq('id', id).single();
+      if (!m) return;
+      const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;"><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Machine</div><div style="font-weight:600; font-size:14px;">${m.machines?.name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Date</div><div style="font-weight:600; font-size:14px;">${m.date}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Time</div><div style="font-weight:600; font-size:14px;">${m.time}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Status</div><div style="font-weight:600; font-size:14px;">${m.status}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Created By</div><div style="font-weight:600; font-size:14px;">${m.users?.full_name || 'N/A'}</div></div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px; margin-bottom:16px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Description</div><div style="font-size:14px; margin-top:4px;">${m.description || 'No description'}</div></div>`;
+      openModal('Maintenance Details', html, () => {});
+      document.getElementById('modal-footer').classList.add('hidden');
+    }
 
     async function getRequiredApprovers(breakdown) {
       const approverIds = new Set();
@@ -2391,75 +2472,46 @@
         if (m?.operator_id) approverIds.add(m.operator_id);
       }
       if (breakdown.fault_type_id) {
-        const { data: junctions } = await supabase.from('fault_type_departments').select('department_id').eq('fault_type_id', breakdown.fault_type_id);
-        const deptIds = (junctions || []).map(j => j.department_id);
-        if (deptIds.length > 0) {
-          const { data: pos } = await supabase.from('positions').select('id').eq('name', 'Manager').single();
-          if (pos?.id) {
-            const { data: mgrs } = await supabase.from('users').select('id').in('department_id', deptIds).eq('position_id', pos.id);
-            (mgrs || []).forEach(m => approverIds.add(m.id));
-          }
+        const { data: roleLinks } = await supabase.from('fault_type_roles').select('role_id').eq('fault_type_id', breakdown.fault_type_id);
+        const roleIds = (roleLinks || []).map(r => r.role_id);
+        if (roleIds.length > 0) {
+          const { data: users } = await supabase.from('users').select('id').in('role_id', roleIds);
+          (users || []).forEach(u => approverIds.add(u.id));
         }
       }
       return Array.from(approverIds);
     }
 
+    function getBreakdownWorkflowStage(breakdown, approvals, requiredCount) {
+      const hasAck = (approvals || []).some(a => a.type === 'acknowledge');
+      const finalCount = (approvals || []).filter(a => a.type === 'approve').length;
+      if (finalCount >= requiredCount && requiredCount > 0) return 'closed';
+      if (finalCount > 0) return 'pending_approval';
+      if (hasAck || breakdown.status === 'machine_running') return 'in_progress';
+      return 'open';
+    }
+
     async function openApprovalModal(breakdownId) {
-      const { data: b } = await supabase.from('breakdowns').select('*, machines(name), fault_types(name), users(full_name)').eq('id', breakdownId).single();
-      if (!b) return;
-      const requiredIds = await getRequiredApprovers(b);
-      const { data: approvals } = await supabase.from('breakdown_approvals').select('*, users(full_name)').eq('breakdown_id', breakdownId);
-      const approvedMap = {};
-      (approvals || []).forEach(a => { approvedMap[a.user_id] = a; });
-      let approversHtml = '';
-      if (requiredIds.length === 0) {
-        approversHtml = '<p style="color:#666; font-size:14px;">No specific managers required. Any admin can approve.</p>';
-      } else {
-        const { data: reqUsers } = await supabase.from('users').select('id, full_name').in('id', requiredIds);
-        approversHtml = '<div style="display:flex; flex-direction:column; gap:8px;">';
-        (reqUsers || []).forEach(u => {
-          const approved = approvedMap[u.id];
-          if (approved) {
-            approversHtml += `<div style="padding:10px; background:rgba(0,255,136,0.08); border-radius:10px; border:1px solid rgba(0,255,136,0.2);"><div style="font-weight:600; color:#1B5E20;">✅ ${u.full_name}</div><div style="font-size:12px; color:#666;">Approved on ${new Date(approved.approved_at).toLocaleString()}</div>${approved.remarks ? `<div style="font-size:13px; margin-top:4px; font-style:italic; color:#333;">"${approved.remarks}"</div>` : ''}</div>`;
-          } else {
-            approversHtml += `<div style="padding:10px; background:rgba(255,170,0,0.08); border-radius:10px; border:1px solid rgba(255,170,0,0.2);"><div style="font-weight:600; color:#E65100;">⏳ ${u.full_name}</div><div style="font-size:12px; color:#666;">Pending approval</div></div>`;
-          }
-        });
-        approversHtml += '</div>';
-      }
-      const hasApproved = approvedMap[currentUser.id];
-      const canApprove = !hasApproved && (requiredIds.length === 0 || requiredIds.includes(currentUser.id) || currentUser.roles?.name === 'Admin');
-      const progress = Object.keys(approvedMap).length + ' / ' + (requiredIds.length || 1) + ' approved';
-      let actionHtml = '';
-      if (canApprove) {
-        actionHtml = `<div class="form-group"><label class="form-label">Your Remarks (optional)</label><textarea class="form-textarea" id="approval-remarks" placeholder="Add any remarks about this approval..."></textarea></div><button class="btn btn-success w-full" onclick="approveBreakdown('${breakdownId}', '${requiredIds.join(',')}')" style="margin-top:12px;"><span>✅</span> Approve Breakdown</button>`;
-      } else if (hasApproved) {
-        actionHtml = `<div style="padding:12px; background:rgba(0,255,136,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ You have already approved this breakdown.</span></div>`;
-      } else {
-        actionHtml = `<div style="padding:12px; background:rgba(255,170,0,0.08); border-radius:10px; text-align:center;"><span style="color:#E65100; font-weight:600;">⏳ You are not authorized to approve this breakdown.</span></div>`;
-      }
-      const html = `<div style="margin-bottom:16px;"><div style="font-size:16px; font-weight:700; margin-bottom:4px;">${b.machines?.name || 'Unknown Machine'}</div><div style="font-size:13px; color:#666;">${b.description}</div><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><span class="badge badge-${b.status}">${b.status === 'machine_stopped' ? 'Machine Stopped' : 'Machine Still Running'}</span><span class="badge" style="background:rgba(21,101,192,0.1); color:#1565C0;">Progress: ${progress}</span></div></div><div style="margin-bottom:16px;"><div style="font-size:14px; font-weight:600; margin-bottom:8px;">Approval Status</div>${approversHtml}</div>${actionHtml}`;
-      openModal('Breakdown Approval', html, () => {});
-      document.getElementById('modal-footer').classList.add('hidden');
+      await viewBreakdown(breakdownId);
     }
 
     async function approveBreakdown(breakdownId, requiredIdsStr) {
       const remarks = document.getElementById('approval-remarks')?.value.trim() || '';
-      const { error } = await supabase.from('breakdown_approvals').insert({ breakdown_id: breakdownId, user_id: currentUser.id, remarks: remarks || null });
+      const { error } = await supabase.from('breakdown_approvals').insert({ breakdown_id: breakdownId, user_id: currentUser.id, type: 'approve', remarks: remarks || null });
       if (error) { showToast(error.message, 'error'); return; }
       showToast('Breakdown approved!', 'success');
       const requiredIds = requiredIdsStr.split(',').filter(id => id);
-      const { data: allApprovals } = await supabase.from('breakdown_approvals').select('user_id').eq('breakdown_id', breakdownId);
-      const approvedIds = new Set((allApprovals || []).map(a => a.user_id));
+      const { data: allApprovals } = await supabase.from('breakdown_approvals').select('user_id, type').eq('breakdown_id', breakdownId);
+      const finalApprovals = (allApprovals || []).filter(a => a.type === 'approve');
+      const approvedIds = new Set(finalApprovals.map(a => a.user_id));
       const allApproved = requiredIds.length === 0 || requiredIds.every(id => approvedIds.has(id));
       if (allApproved) {
-        await supabase.from('breakdowns').update({ status: 'closed' }).eq('id', breakdownId);
         showToast('All managers have approved. Breakdown is now closed.', 'success');
       }
       closeModal();
       loadBreakdownsPage();
+      loadDashboard();
     }
-
 
   </script>
 </body>
