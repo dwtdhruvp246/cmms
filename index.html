@@ -1497,7 +1497,7 @@
       if (!upcoming || upcoming.length === 0) {
         upList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No upcoming maintenance scheduled.</p></div>';
       } else {
-        upList.innerHTML = upcoming.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.description || 'No description'}</div></div><div class="badge badge-scheduled">${m.date}</div></div>`).join('');
+        upList.innerHTML = upcoming.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewMaintenance('${m.id}')"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.description || 'No description'}</div></div><div class="badge badge-scheduled">${m.date}</div></div>`).join('');
       }
 
       const { data: recent } = await supabase.from('breakdowns').select('*, machines(name), fault_types(name)').order('created_at', { ascending: false }).limit(5);
@@ -1704,7 +1704,12 @@
     async function openAddMaintenanceModal() {
       editingId = null;
       const machineOpts = await getMachineOptions();
-      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="sm-machine">${machineOpts}</select></div><div class="grid-2"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="sm-date"></div><div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="sm-time"></div></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="sm-desc" placeholder="Describe the maintenance task..."></textarea></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="sm-status"><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>`;
+      const { data: depts } = await supabase.from('departments').select('id, name').order('name');
+      let deptChecks = '';
+      (depts || []).forEach(d => {
+        deptChecks += `<label style="display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer;"><input type="checkbox" value="${d.id}" class="maint-dept-check" style="width:18px; height:18px; cursor:pointer;"><span>${d.name}</span></label>`;
+      });
+      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="sm-machine">${machineOpts}</select></div><div class="grid-2"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="sm-date"></div><div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="sm-time"></div></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="sm-desc" placeholder="Describe the maintenance task..."></textarea></div><div class="form-group"><label class="form-label">Departments Involved</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${deptChecks}</div></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="sm-status"><option value="scheduled">Scheduled</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div>`;
       openModal('Add Scheduled Maintenance', html, async () => {
         const machineId = document.getElementById('sm-machine').value;
         const date = document.getElementById('sm-date').value;
@@ -1712,8 +1717,12 @@
         const desc = document.getElementById('sm-desc').value.trim();
         const status = document.getElementById('sm-status').value;
         if (!machineId || !date || !time) { showToast('Machine, date and time are required', 'error'); return; }
-        const { error } = await supabase.from('scheduled_maintenance').insert({ machine_id: machineId, date, time, description: desc, status, created_by: currentUser.id });
+        const { data: newMaint, error } = await supabase.from('scheduled_maintenance').insert({ machine_id: machineId, date, time, description: desc, status, created_by: currentUser.id }).select('id').single();
         if (error) { showToast(error.message, 'error'); return; }
+        const deptChecked = document.querySelectorAll('.maint-dept-check:checked');
+        const deptInserts = [];
+        deptChecked.forEach(cb => deptInserts.push({ maintenance_id: newMaint.id, department_id: cb.value }));
+        if (deptInserts.length > 0) await supabase.from('maintenance_departments').insert(deptInserts);
         showToast('Maintenance scheduled successfully', 'success');
         loadScheduledMaintenance();
       });
@@ -1724,10 +1733,25 @@
       if (!m) return;
       editingId = id;
       const machineOpts = await getMachineOptions(m.machine_id);
-      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="sm-machine">${machineOpts}</select></div><div class="grid-2"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="sm-date" value="${m.date}"></div><div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="sm-time" value="${m.time}"></div></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="sm-desc">${m.description || ''}</textarea></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="sm-status"><option value="scheduled" ${m.status === 'scheduled' ? 'selected' : ''}>Scheduled</option><option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completed</option><option value="cancelled" ${m.status === 'cancelled' ? 'selected' : ''}>Cancelled</option></select></div>`;
+      const [{ data: depts }, { data: existingDepts }] = await Promise.all([
+        supabase.from('departments').select('id, name').order('name'),
+        supabase.from('maintenance_departments').select('department_id').eq('maintenance_id', id)
+      ]);
+      const existingDeptIds = new Set((existingDepts || []).map(j => j.department_id));
+      let deptChecks = '';
+      (depts || []).forEach(d => {
+        const checked = existingDeptIds.has(d.id) ? 'checked' : '';
+        deptChecks += `<label style="display:flex; align-items:center; gap:8px; padding:8px 0; cursor:pointer;"><input type="checkbox" value="${d.id}" class="maint-dept-check" style="width:18px; height:18px; cursor:pointer;" ${checked}><span>${d.name}</span></label>`;
+      });
+      const html = `<div class="form-group"><label class="form-label">Machine</label><select class="form-select" id="sm-machine">${machineOpts}</select></div><div class="grid-2"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="sm-date" value="${m.date}"></div><div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="sm-time" value="${m.time}"></div></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="sm-desc">${m.description || ''}</textarea></div><div class="form-group"><label class="form-label">Departments Involved</label><div style="display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto; padding:8px; background:rgba(255,255,255,0.5); border-radius:12px; border:1px solid rgba(0,0,0,0.1);">${deptChecks}</div></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="sm-status"><option value="scheduled" ${m.status === 'scheduled' ? 'selected' : ''}>Scheduled</option><option value="completed" ${m.status === 'completed' ? 'selected' : ''}>Completed</option><option value="cancelled" ${m.status === 'cancelled' ? 'selected' : ''}>Cancelled</option></select></div>`;
       openModal('Edit Maintenance', html, async () => {
         const { error } = await supabase.from('scheduled_maintenance').update({ machine_id: document.getElementById('sm-machine').value, date: document.getElementById('sm-date').value, time: document.getElementById('sm-time').value, description: document.getElementById('sm-desc').value.trim(), status: document.getElementById('sm-status').value }).eq('id', id);
         if (error) { showToast(error.message, 'error'); return; }
+        await supabase.from('maintenance_departments').delete().eq('maintenance_id', id);
+        const deptChecked = document.querySelectorAll('.maint-dept-check:checked');
+        const deptInserts = [];
+        deptChecked.forEach(cb => deptInserts.push({ maintenance_id: id, department_id: cb.value }));
+        if (deptInserts.length > 0) await supabase.from('maintenance_departments').insert(deptInserts);
         showToast('Maintenance updated', 'success');
         loadScheduledMaintenance();
       });
@@ -1735,6 +1759,7 @@
 
     async function deleteMaintenance(id) {
       if (!confirm('Are you sure you want to delete this maintenance schedule?')) return;
+      await supabase.from('maintenance_departments').delete().eq('maintenance_id', id);
       const { error } = await supabase.from('scheduled_maintenance').delete().eq('id', id);
       if (error) { showToast(error.message, 'error'); return; }
       showToast('Maintenance deleted', 'success');
@@ -2532,7 +2557,9 @@
     async function viewMaintenance(id) {
       const { data: m } = await supabase.from('scheduled_maintenance').select('*, machines(name), users(full_name)').eq('id', id).single();
       if (!m) return;
-      const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;"><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Machine</div><div style="font-weight:600; font-size:14px;">${m.machines?.name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Date</div><div style="font-weight:600; font-size:14px;">${m.date}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Time</div><div style="font-weight:600; font-size:14px;">${m.time}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Status</div><div style="font-weight:600; font-size:14px;">${m.status}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Created By</div><div style="font-weight:600; font-size:14px;">${m.users?.full_name || 'N/A'}</div></div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px; margin-bottom:16px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Description</div><div style="font-size:14px; margin-top:4px;">${m.description || 'No description'}</div></div>`;
+      const { data: deptJunctions } = await supabase.from('maintenance_departments').select('departments(name)').eq('maintenance_id', id);
+      const deptNames = (deptJunctions || []).map(j => j.departments?.name).filter(Boolean).join(', ') || 'None';
+      const html = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;"><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Machine</div><div style="font-weight:600; font-size:14px;">${m.machines?.name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Date</div><div style="font-weight:600; font-size:14px;">${m.date}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Time</div><div style="font-weight:600; font-size:14px;">${m.time}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Status</div><div style="font-weight:600; font-size:14px;">${m.status}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Created By</div><div style="font-weight:600; font-size:14px;">${m.users?.full_name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Departments</div><div style="font-weight:600; font-size:14px;">${deptNames}</div></div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px; margin-bottom:16px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Description</div><div style="font-size:14px; margin-top:4px;">${m.description || 'No description'}</div></div>`;
       openModal('Maintenance Details', html, () => {});
       document.getElementById('modal-footer').classList.add('hidden');
     }
