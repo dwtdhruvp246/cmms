@@ -4,251 +4,57 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CMMS Dashboard</title>
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-start: #E3F2FD;
-      --bg-mid: #BBDEFB;
-      --bg-end: #90CAF9;
-      --glass-bg: rgba(255, 255, 255, 0.55);
-      --glass-border: rgba(255, 255, 255, 0.8);
-      --glass-highlight: rgba(255, 255, 255, 0.95);
-      --glass-shadow: 0 8px 32px rgba(33, 150, 243, 0.15);
-      --text-primary: #111111;
+      --bg-body: #F5F0E8;
+      --bg-card: #FFFFFF;
+      --bg-ivory: #FAF8F3;
+      --bg-hover: #F0EDE6;
+      --accent: #C9A96E;
+      --accent-light: #F5ECD7;
+      --accent-hover: #B8985D;
+      --accent-text: #FFFFFF;
+      --text-primary: #1A1A1A;
       --text-secondary: #333333;
       --text-muted: #666666;
-      --accent: #1565C0;
-      --accent-glow: rgba(21, 101, 192, 0.25);
-      --success: #1B5E20;
-      --warning: #E65100;
-      --danger: #B71C1C;
-      --info: #0D47A1;
-      --radius: 20px;
-      --radius-sm: 12px;
-      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --text-light: #888888;
+      --border: #E8E4DC;
+      --border-light: #F0EDE6;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      --shadow-hover: 0 4px 12px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+      --shadow-strong: 0 8px 24px rgba(0,0,0,0.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --sidebar-width: 260px;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
-      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, var(--bg-start), var(--bg-mid), var(--bg-end));
-      background-attachment: fixed;
-      color: #111111;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-body);
+      color: var(--text-primary);
       min-height: 100vh;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .glass {
-      background: var(--glass-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius);
-      box-shadow: var(--glass-shadow);
-    }
-    .glass-strong {
-      background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      border-radius: var(--radius);
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-      color: #111111;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: var(--transition);
-      color: #111111;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-soft {
-      background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
-      border: 1px solid rgba(255,255,255,0.1);
-      box-shadow: 6px 6px 12px rgba(0,0,0,0.25), -6px -6px 12px rgba(255,255,255,0.05);
-    }
-    .btn-soft:hover {
-      transform: translateY(-2px);
-      box-shadow: 8px 8px 16px rgba(0,0,0,0.15), -8px -8px 16px rgba(255,255,255,0.4);
-      color: #111111;
-    }
-    .btn-soft:active {
-      transform: translateY(0);
-      box-shadow: inset 4px 4px 8px rgba(0,0,0,0.1), inset -4px -4px 8px rgba(255,255,255,0.2);
-      color: #111111;
-    }
-    .btn-primary {
-      background: linear-gradient(145deg, #64B5F6, #42A5F5);
-      box-shadow: 6px 6px 12px rgba(0,0,0,0.15), -6px -6px 12px rgba(100,181,246,0.2);
-      border: 1px solid rgba(66,165,245,0.4);
-      color: #111111;
-    }
-    .btn-primary:hover {
-      box-shadow: 8px 8px 20px rgba(0,0,0,0.15), -8px -8px 20px rgba(100,181,246,0.25);
-      color: #111111;
-      filter: brightness(1.1);
-    }
-    .btn-danger {
-      background: linear-gradient(145deg, var(--danger), #cc3344);
-      box-shadow: 6px 6px 12px rgba(0,0,0,0.15), -6px -6px 12px rgba(255,71,87,0.15);
-      border: 1px solid rgba(255,71,87,0.3);
-      color: #111111;
-    }
-    .btn-success {
-      background: linear-gradient(145deg, #81C784, #66BB6A);
-      box-shadow: 6px 6px 12px rgba(0,0,0,0.15), -6px -6px 12px rgba(129,199,132,0.2);
-      border: 1px solid rgba(102,187,106,0.4);
-    }
-    .btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 10px; }
-    .btn-xs { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
-    .form-group { margin-bottom: 20px; }
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #333333;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .form-input, .form-select, .form-textarea {
-      width: 100%;
-      padding: 14px 18px;
-      background: rgba(255,255,255,0.7);
-      border: 1px solid rgba(2,136,209,0.2);
-      border-radius: var(--radius-sm);
-      color: #111111;
-      font-size: 15px;
-      outline: none;
-      transition: var(--transition);
-      box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1), inset -2px -2px 5px rgba(255,255,255,0.03);
-    }
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: #1565C0;
-      box-shadow: inset 2px 2px 5px rgba(0,0,0,0.05), inset -2px -2px 5px rgba(255,255,255,0.3), 0 0 0 3px rgba(21,101,192,0.15);
-    }
-    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-    .form-input, .form-select, .form-textarea { color: #111111; }
-    .form-select option { background: #ffffff; color: #111111; }
-    .form-textarea { min-height: 100px; resize: vertical; }
-    .table-container { overflow-x: auto; border-radius: var(--radius); }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    .data-table thead { background: rgba(255,255,255,0.08); }
-    .data-table th {
-      padding: 14px 16px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-secondary);
-      border-bottom: 1px solid var(--glass-border);
-    }
-    .data-table td {
-      padding: 14px 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      color: var(--text-secondary);
-    }
-    .data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-    .data-table tbody tr:last-child td { border-bottom: none; }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .badge-machine_stopped { background: rgba(183,28,28,0.1); color: #B71C1C; }
-    .badge-machine_running { background: rgba(230,81,0,0.1); color: var(--warning); }
-    .badge-open { background: rgba(183,28,28,0.1); color: #B71C1C; }
-    .badge-in_progress { background: rgba(230,81,0,0.1); color: #E65100; }
-    .badge-pending_approval { background: rgba(13,71,161,0.1); color: #0D47A1; }
-    .badge-closed { background: rgba(27,94,32,0.1); color: #1B5E20; }
-    .badge-scheduled { background: rgba(21,101,192,0.1); color: #1565C0; }
-    .badge-completed { background: rgba(27,94,32,0.1); color: var(--success); }
-    .bento-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 24px;
-      margin-bottom: 32px;
-    }
-    .bento-card {
-      padding: 28px;
-      position: relative;
-      overflow: hidden;
-      transition: var(--transition);
-      background: var(--glass-bg);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius);
-      box-shadow: var(--glass-shadow);
-    }
-    .bento-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 16px 48px rgba(0,0,0,0.35);
-      border-color: var(--glass-highlight);
-    }
-    .bento-card::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 60%);
-      pointer-events: none;
-    }
-    .bento-card .card-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      margin-bottom: 16px;
-      background: rgba(255,255,255,0.1);
-      box-shadow: 4px 4px 8px rgba(0,0,0,0.2), -4px -4px 8px rgba(255,255,255,0.05);
-    }
-    .bento-card .card-value {
-      font-size: 36px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      letter-spacing: -0.5px;
-    }
-    .bento-card .card-label {
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+
+    /* ============================================
+       SIDEBAR
+       ============================================ */
     .sidebar {
-      width: 280px;
+      width: var(--sidebar-width);
       height: 100vh;
       position: fixed;
       left: 0;
       top: 0;
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
-      border-right: 1px solid rgba(255,255,255,0.6);
-      padding: 28px 20px;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border);
+      padding: 32px 20px 24px;
       display: flex;
       flex-direction: column;
       transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -258,45 +64,50 @@
     .sidebar-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding-bottom: 28px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid var(--glass-border);
+      gap: 14px;
+      padding-bottom: 32px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
     }
     .sidebar-logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--accent), #0099cc);
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      color: #111111;
-      box-shadow: 0 4px 12px rgba(21,101,192,0.3);
+      flex-shrink: 0;
+    }
+    .sidebar-logo svg {
+      width: 22px;
+      height: 22px;
+      color: white;
     }
     .sidebar-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
+      color: var(--text-primary);
+      line-height: 1.2;
     }
     .sidebar-title span {
       display: block;
       font-size: 11px;
       font-weight: 500;
-      color: var(--text-secondary);
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       margin-top: 2px;
     }
-    .nav-list { list-style: none; flex: 1; }
+    .nav-list { list-style: none; flex: 1; padding-top: 8px; }
     .nav-item {
       width: 100%;
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      margin-bottom: 6px;
+      padding: 10px 14px;
+      margin-bottom: 4px;
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: var(--transition);
@@ -304,26 +115,45 @@
       border: none;
       color: var(--text-secondary);
       font-size: 14px;
-      text-shadow: none;
       font-weight: 500;
       font-family: inherit;
       text-align: left;
+      letter-spacing: -0.2px;
     }
     .nav-item:hover {
-      background: rgba(255,255,255,0.06);
-      color: #111111;
+      background: var(--bg-hover);
+      color: var(--text-primary);
     }
     .nav-item.active {
-      background: rgba(21,101,192,0.1);
-      color: #1565C0;
-      border: 1px solid rgba(21,101,192,0.3);
-      box-shadow: 0 4px 12px rgba(0,212,255,0.1);
+      background: var(--accent-light);
+      color: var(--text-primary);
+      font-weight: 600;
     }
-    .nav-icon { font-size: 20px; width: 28px; text-align: center; }
+    .nav-item.active .nav-icon svg {
+      color: var(--accent);
+    }
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .nav-icon svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+      stroke-width: 1.8;
+      transition: var(--transition);
+    }
+    .nav-item:hover .nav-icon svg {
+      color: var(--text-primary);
+    }
     .sidebar-footer {
       padding-top: 20px;
-      margin-top: 20px;
-      border-top: 1px solid var(--glass-border);
+      margin-top: auto;
+      border-top: 1px solid var(--border-light);
     }
     .user-card {
       display: flex;
@@ -331,154 +161,422 @@
       gap: 12px;
       padding: 12px;
       border-radius: var(--radius-sm);
-      background: rgba(255,255,255,0.04);
+      background: var(--bg-ivory);
       margin-bottom: 12px;
+      border: 1px solid var(--border-light);
     }
     .user-avatar {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), #0099cc);
+      background: var(--accent);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 16px;
-      color: #111111;
+      font-size: 14px;
+      color: white;
+      flex-shrink: 0;
     }
-    .user-info { flex: 1; }
-    .user-name { font-size: 14px; font-weight: 600; }
-    .user-role { font-size: 12px; color: var(--text-secondary); }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+
+    /* ============================================
+       MAIN CONTENT
+       ============================================ */
     .main-content {
-      margin-left: 280px;
-      padding: 32px;
+      margin-left: var(--sidebar-width);
+      padding: 32px 40px;
       min-height: 100vh;
       transition: margin-left 0.35s ease;
+      max-width: 1400px;
     }
     .page-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
       margin-bottom: 32px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
     }
     .page-title {
       font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.5px;
+      color: var(--text-primary);
+      line-height: 1.2;
     }
     .page-subtitle {
       font-size: 14px;
-      color: var(--text-secondary);
-      margin-top: 4px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      font-weight: 500;
     }
-    #internet-status {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-      padding: 10px 18px;
-      border-radius: 30px;
+    .welcome-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: right;
+    }
+    .welcome-text span {
+      display: block;
       font-size: 13px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      backdrop-filter: blur(12px);
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ============================================
+       CARDS
+       ============================================ */
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
       transition: var(--transition);
     }
-    #internet-status.online {
-      background: rgba(27, 94, 32, 0.1);
-      border: 1px solid rgba(27, 94, 32, 0.3);
-      color: var(--success);
-      box-shadow: 0 4px 12px rgba(0,255,136,0.15);
+    .card:hover {
+      box-shadow: var(--shadow-hover);
     }
-    #internet-status.offline {
-      background: rgba(183, 28, 28, 0.1);
-      border: 1px solid rgba(183, 28, 28, 0.3);
-      color: #B71C1C;
-      box-shadow: 0 4px 12px rgba(255,71,87,0.15);
+    .card-body { padding: 24px; }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
     }
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      animation: pulse 2s infinite;
+    .card-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
     }
-    .status-dot.green {
-      background: var(--success);
-      box-shadow: 0 0 10px var(--success);
+
+    /* ============================================
+       BENTO GRID
+       ============================================ */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 32px;
     }
-    .status-dot.red {
-      background: var(--danger);
-      box-shadow: 0 0 10px var(--danger);
+    .bento-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    .bento-card:hover {
+      box-shadow: var(--shadow-hover);
+      transform: translateY(-2px);
     }
-    #login-page {
-      min-height: 100vh;
+    .bento-card .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
-      position: relative;
+      font-size: 20px;
+      margin-bottom: 16px;
+      background: var(--bg-ivory);
+      border: 1px solid var(--border-light);
     }
-    #login-page::before {
+    .bento-card .card-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -1px;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+    .bento-card .card-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ============================================
+       BUTTONS
+       ============================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-primary);
+      font-family: inherit;
+      letter-spacing: -0.2px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(201,169,110,0.25);
+    }
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+    .btn-soft {
+      background: var(--bg-ivory);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-soft:hover {
+      background: var(--bg-hover);
+      border-color: var(--border);
+      color: var(--text-primary);
+    }
+    .btn-danger {
+      background: #FEF2F2;
+      color: #991B1B;
+      border: 1px solid #FECACA;
+    }
+    .btn-danger:hover {
+      background: #FEE2E2;
+    }
+    .btn-success {
+      background: #F0FDF4;
+      color: #166534;
+      border: 1px solid #BBF7D0;
+    }
+    .btn-success:hover {
+      background: #DCFCE7;
+    }
+    .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: var(--radius-xs); }
+    .btn-xs { padding: 6px 10px; font-size: 12px; border-radius: var(--radius-xs); }
+
+    /* ============================================
+       FORMS
+       ============================================ */
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: var(--transition);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light), inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-light); }
+    .form-select option { background: var(--bg-card); color: var(--text-primary); }
+    .form-textarea { min-height: 100px; resize: vertical; }
+
+    /* ============================================
+       TABLES
+       ============================================ */
+    .table-container { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .data-table thead { background: var(--bg-ivory); }
+    .data-table th {
+      padding: 14px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .data-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .data-table tbody tr:hover { background: var(--bg-hover); }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ============================================
+       BADGES
+       ============================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+    }
+    .badge-open { background: #FEF2F2; color: #991B1B; border-color: #FECACA; }
+    .badge-in_progress { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+    .badge-pending_approval { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+    .badge-closed { background: #F0FDF4; color: #166534; border-color: #BBF7D0; }
+    .badge-scheduled { background: #F5F3FF; color: #5B21B6; border-color: #DDD6FE; }
+    .badge-completed { background: #F0FDF4; color: #166534; border-color: #BBF7D0; }
+    .badge-machine_stopped { background: #FEF2F2; color: #991B1B; border-color: #FECACA; }
+    .badge-machine_running { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+
+    /* ============================================
+       CALENDAR
+       ============================================ */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .calendar-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .calendar-nav { display: flex; gap: 8px; }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    .calendar-day-header {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      padding: 8px;
+      letter-spacing: 0.5px;
+    }
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-xs);
+      background: var(--bg-ivory);
+      border: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    .calendar-day:hover {
+      background: var(--bg-hover);
+      border-color: var(--border);
+    }
+    .calendar-day.other-month {
+      color: var(--text-light);
+      opacity: 0.5;
+      background: transparent;
+      border-color: transparent;
+    }
+    .calendar-day.today {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+    .calendar-day.has-event::after {
       content: '';
       position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 50%, rgba(0,212,255,0.08) 0%, transparent 50%);
-      pointer-events: none;
+      bottom: 5px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
     }
-    .login-card {
-      width: 100%;
-      max-width: 440px;
-      padding: 48px;
-      position: relative;
-      z-index: 1;
-      color: #111111;
-    }
-    .login-header {
-      text-align: center;
-      margin-bottom: 40px;
-    }
-    .login-header .logo-icon {
-      width: 64px;
-      height: 64px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, var(--accent), #0099cc);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-      margin: 0 auto 20px;
-      color: #111111;
-      box-shadow: 0 8px 24px rgba(21,101,192,0.3);
-    }
-    .login-header h1 {
-      font-size: 28px;
+    .calendar-day.selected {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
       font-weight: 700;
-      margin-bottom: 8px;
-      color: #111111;
     }
-    .login-header p {
-      color: var(--text-secondary);
-      font-size: 15px;
+    .calendar-day.selected.has-event::after {
+      background: white;
     }
-    .login-form .btn {
-      width: 100%;
-      padding: 16px;
-      font-size: 16px;
-      margin-top: 8px;
+
+    /* ============================================
+       TABS
+       ============================================ */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0;
     }
+    .tab-btn {
+      padding: 10px 18px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      letter-spacing: -0.2px;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+    .tab-btn.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ============================================
+       MODAL
+       ============================================ */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.25);
-      backdrop-filter: blur(8px);
+      background: rgba(0,0,0,0.35);
+      backdrop-filter: blur(4px);
       z-index: 500;
       display: none;
       align-items: center;
@@ -496,9 +594,13 @@
       max-width: 600px;
       max-height: 90vh;
       overflow-y: auto;
+      background: var(--bg-card);
+      border-radius: var(--radius);
       padding: 32px;
       position: relative;
       animation: modalSlide 0.3s ease;
+      box-shadow: var(--shadow-strong);
+      border: 1px solid var(--border);
     }
     @keyframes modalSlide {
       from { transform: translateY(30px); opacity: 0; }
@@ -511,27 +613,30 @@
       margin-bottom: 24px;
     }
     .modal-title {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
-      color: #111111;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
     }
     .modal-close {
-      width: 36px;
-      height: 36px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: none;
-      background: rgba(0,0,0,0.08);
-      color: #333333;
+      background: var(--bg-ivory);
+      color: var(--text-muted);
       cursor: pointer;
       font-size: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: var(--transition);
+      border: 1px solid var(--border-light);
     }
     .modal-close:hover {
-      background: rgba(183,28,28,0.15);
-      color: #B71C1C;
+      background: #FEF2F2;
+      color: #991B1B;
+      border-color: #FECACA;
     }
     .modal-footer {
       display: flex;
@@ -539,8 +644,12 @@
       gap: 12px;
       margin-top: 24px;
       padding-top: 20px;
-      border-top: 1px solid rgba(0,0,0,0.1);
+      border-top: 1px solid var(--border);
     }
+
+    /* ============================================
+       TOAST
+       ============================================ */
     .toast-container {
       position: fixed;
       bottom: 24px;
@@ -551,131 +660,131 @@
       gap: 12px;
     }
     .toast {
-      padding: 16px 24px;
+      padding: 14px 20px;
       border-radius: var(--radius-sm);
-      backdrop-filter: blur(16px);
       font-size: 14px;
       font-weight: 500;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       min-width: 300px;
       max-width: 400px;
       animation: toastSlide 0.4s ease;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: var(--shadow-strong);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
     }
     @keyframes toastSlide {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
-    .toast-success { background: rgba(27,94,32,0.1); color: var(--success); border-color: rgba(27,94,32,0.2); }
-    .toast-error { background: rgba(183,28,28,0.1); color: #B71C1C; border-color: rgba(183,28,28,0.2); }
-    .toast-info { background: rgba(21,101,192,0.1); color: #1565C0; border-color: rgba(21,101,192,0.2); }
-    .calendar-header {
+    .toast-success { border-left: 4px solid #166534; }
+    .toast-error { border-left: 4px solid #991B1B; }
+    .toast-info { border-left: 4px solid var(--accent); }
+
+    /* ============================================
+       LOGIN PAGE
+       ============================================ */
+    #login-page {
+      min-height: 100vh;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .calendar-title {
-      font-size: 18px;
-      font-weight: 700;
-    }
-    .calendar-nav {
-      display: flex;
-      gap: 8px;
-    }
-    .calendar-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 8px;
-    }
-    .calendar-day-header {
-      text-align: center;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      padding: 8px;
-    }
-    .calendar-day {
-      aspect-ratio: 1;
-      display: flex;
-      color: #111111;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      border-radius: var(--radius-sm);
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.06);
-      cursor: pointer;
-      transition: var(--transition);
-      position: relative;
-      font-size: 14px;
+      padding: 20px;
+      background: var(--bg-body);
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      padding: 48px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-strong);
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .login-header .logo-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 20px;
+      color: white;
+      box-shadow: 0 4px 12px rgba(201,169,110,0.3);
+    }
+    .login-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+    .login-header p {
+      color: var(--text-muted);
+      font-size: 15px;
       font-weight: 500;
     }
-    .calendar-day:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: var(--glass-border);
+    .login-form .btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 15px;
+      margin-top: 8px;
     }
-    .calendar-day.other-month {
-      color: var(--text-muted);
-      opacity: 0.4;
-    }
-    .calendar-day.today {
-      background: rgba(21,101,192,0.15);
-      border-color: #1565C0;
-      color: #1565C0;
-      font-weight: 700;
-    }
-    .calendar-day.has-event::after {
-      content: '';
-      position: absolute;
-      bottom: 6px;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 6px var(--accent);
-    }
-    .calendar-day.selected {
-      background: rgba(21,101,192,0.2);
-      border-color: #1565C0;
-    }
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--glass-border);
-      padding-bottom: 12px;
-    }
-    .tab-btn {
-      padding: 10px 20px;
-      border-radius: 10px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 14px;
+
+    /* ============================================
+       INTERNET STATUS
+       ============================================ */
+    #internet-status {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 12px;
       font-weight: 600;
-      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
       transition: var(--transition);
-      font-family: inherit;
+      letter-spacing: -0.2px;
     }
-    .tab-btn:hover { color: #111111; background: rgba(21,101,192,0.08); }
-    .tab-btn.active {
-      color: #111111;
-      background: rgba(21,101,192,0.1);
-      box-shadow: 0 4px 12px rgba(0,212,255,0.1);
+    #internet-status.online { color: #166534; border-color: #BBF7D0; }
+    #internet-status.offline { color: #991B1B; border-color: #FECACA; }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
     }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    .status-dot.green { background: #166534; }
+    .status-dot.red { background: #991B1B; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ============================================
+       PRINT
+       ============================================ */
     .printable-report {
       background: white;
-      color: #111111;
+      color: #1A1A1A;
       padding: 40px;
       border-radius: var(--radius);
       display: none;
+      border: 1px solid var(--border);
     }
     .printable-report.active { display: block; }
     @media print {
@@ -693,45 +802,56 @@
       }
       .no-print { display: none !important; }
     }
+
+    /* ============================================
+       MOBILE
+       ============================================ */
     .mobile-toggle {
       display: none;
       position: fixed;
-      top: 20px;
-      left: 20px;
+      top: 16px;
+      left: 16px;
       z-index: 101;
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.85);
-      border: 1px solid rgba(21,101,192,0.3);
-      color: #1565C0;
-      font-size: 20px;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-xs);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      font-size: 18px;
       cursor: pointer;
-      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      align-items: center;
+      justify-content: center;
     }
     .sidebar-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.3);
       z-index: 99;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(2px);
     }
     .sidebar-overlay.active { display: block; }
     @media (max-width: 1024px) {
       .bento-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 768px) {
-      .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+      .mobile-toggle { display: flex; }
       .sidebar { transform: translateX(-100%); }
       .sidebar.open { transform: translateX(0); }
-      .main-content { margin-left: 0; padding: 80px 16px 24px; }
+      .main-content { margin-left: 0; padding: 72px 20px 24px; }
       .bento-grid { grid-template-columns: 1fr; }
       .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
       .login-card { padding: 32px 24px; }
       .modal-container { padding: 24px; }
-      #internet-status { top: 12px; right: 12px; font-size: 11px; padding: 6px 12px; }
+      #internet-status { top: 12px; right: 12px; font-size: 11px; padding: 6px 10px; }
+      .welcome-text { text-align: left; }
     }
+
+    /* ============================================
+       UTILITIES
+       ============================================ */
     .hidden { display: none !important; }
     .flex { display: flex; }
     .flex-col { flex-direction: column; }
@@ -750,25 +870,42 @@
     .empty-state {
       text-align: center;
       padding: 48px 24px;
-      color: var(--text-secondary);
+      color: var(--text-muted);
     }
     .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
-      opacity: 0.5;
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.4;
     }
     .loading-spinner {
-      width: 24px;
-      height: 24px;
-      border: 2px solid rgba(255,255,255,0.1);
-      border-top-color: #1565C0;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-light);
+      border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
       display: inline-block;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
     @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* List item styles for dashboard cards */
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-light);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .list-item:hover {
+      padding-left: 4px;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .list-item-title { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+    .list-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
   </style>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <base target="_blank">
@@ -780,11 +917,13 @@
     <span id="internet-text">Online</span>
   </div>
 
-  <button class="mobile-toggle no-print" id="mobile-toggle" onclick="toggleSidebar()">☰</button>
+  <button class="mobile-toggle no-print" id="mobile-toggle" onclick="toggleSidebar()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+  </button>
   <div class="sidebar-overlay no-print" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
   <div id="login-page">
-    <div class="login-card glass-strong">
+    <div class="login-card">
       <div class="login-header">
         <div class="logo-icon">🔧</div>
         <h1>CMMS Dashboard</h1>
@@ -813,7 +952,9 @@
   <div id="app" class="hidden">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">🔧</div>
+        <div class="sidebar-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+        </div>
         <div class="sidebar-title">
           CMMS
           <span>Dashboard</span>
@@ -829,7 +970,8 @@
           </div>
         </div>
         <button class="btn btn-soft btn-sm w-full" onclick="handleLogout()">
-          <span>🚪</span> Sign Out
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Sign Out
         </button>
       </div>
     </aside>
@@ -842,47 +984,51 @@
             <div class="page-title">Dashboard</div>
             <div class="page-subtitle">Overview of your maintenance operations</div>
           </div>
-          <div style="text-align:right;">
-            <div style="font-size:18px; font-weight:600; color:#111111;">Welcome back, <span id="dash-username">User</span></div>
-            <div style="font-size:13px; color:#666666;">Here is your maintenance overview</div>
+          <div class="welcome-text">
+            Welcome back, <span id="dash-username">User</span>
+            <span>Here is your maintenance overview</span>
           </div>
         </div>
         <div class="bento-grid">
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(183,28,28,0.1); color: #B71C1C;">⚠️</div>
+            <div class="card-icon" style="background: #FEF2F2; color: #991B1B;">⚠️</div>
             <div class="card-value" id="tally-open">0</div>
             <div class="card-label">Open Issues</div>
           </div>
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(230,81,0,0.1); color: #E65100;">🔧</div>
+            <div class="card-icon" style="background: #FFFBEB; color: #92400E;">🔧</div>
             <div class="card-value" id="tally-in-progress">0</div>
             <div class="card-label">In Progress</div>
           </div>
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(13,71,161,0.1); color: #0D47A1;">⏳</div>
+            <div class="card-icon" style="background: #EFF6FF; color: #1E40AF;">⏳</div>
             <div class="card-value" id="tally-pending">0</div>
             <div class="card-label">Pending Approval</div>
           </div>
           <div class="bento-card">
-            <div class="card-icon" style="background: rgba(27,94,32,0.1); color: #1B5E20;">📅</div>
+            <div class="card-icon" style="background: #F5F3FF; color: #5B21B6;">📅</div>
             <div class="card-value" id="tally-scheduled">0</div>
             <div class="card-label">Scheduled Maintenance</div>
           </div>
         </div>
         <div class="grid-2">
-          <div class="glass" style="padding: 24px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">📅 Upcoming Scheduled Maintenance</h3>
-              <button class="btn btn-soft btn-xs" onclick="navigateTo('scheduled-maintenance')">View All</button>
+          <div class="card">
+            <div class="card-body">
+              <div class="card-header">
+                <h3>📅 Upcoming Scheduled Maintenance</h3>
+                <button class="btn btn-soft btn-xs" onclick="navigateTo('scheduled-maintenance')">View All</button>
+              </div>
+              <div id="dash-upcoming-list"></div>
             </div>
-            <div id="dash-upcoming-list"></div>
           </div>
-          <div class="glass" style="padding: 24px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">🔧 Recent Breakdowns</h3>
-              <button class="btn btn-soft btn-xs" onclick="navigateTo('breakdowns')">View All</button>
+          <div class="card">
+            <div class="card-body">
+              <div class="card-header">
+                <h3>🔧 Recent Breakdowns</h3>
+                <button class="btn btn-soft btn-xs" onclick="navigateTo('breakdowns')">View All</button>
+              </div>
+              <div id="dash-recent-list"></div>
             </div>
-            <div id="dash-recent-list"></div>
           </div>
         </div>
       </div>
@@ -899,13 +1045,17 @@
         </div>
         <div class="mb-6" id="my-machines-list"></div>
         <div class="grid-2">
-          <div class="glass" style="padding: 24px;">
-            <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">🔧 Recent Breakdowns on My Machines</h3>
-            <div id="my-breakdowns-list"></div>
+          <div class="card">
+            <div class="card-body">
+              <h3 style="font-size:16px; font-weight:700; margin-bottom:20px;">🔧 Recent Breakdowns on My Machines</h3>
+              <div id="my-breakdowns-list"></div>
+            </div>
           </div>
-          <div class="glass" style="padding: 24px;">
-            <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">📅 Upcoming Maintenance for My Machines</h3>
-            <div id="my-maintenance-list"></div>
+          <div class="card">
+            <div class="card-body">
+              <h3 style="font-size:16px; font-weight:700; margin-bottom:20px;">📅 Upcoming Maintenance for My Machines</h3>
+              <div id="my-maintenance-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -920,27 +1070,29 @@
             <span>➕</span> Report Breakdown
           </button>
         </div>
-        <div class="glass" style="padding: 24px;">
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Machine</th>
-                  <th>Description</th>
-                  <th>Fault Type</th>
-                  <th>Impact</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Reported</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="breakdowns-table-body"></tbody>
-            </table>
-          </div>
-          <div id="breakdowns-empty" class="empty-state hidden">
-            <div class="empty-state-icon">📋</div>
-            <p>No breakdowns reported yet.</p>
+        <div class="card">
+          <div class="card-body">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Machine</th>
+                    <th>Description</th>
+                    <th>Fault Type</th>
+                    <th>Impact</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Reported</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="breakdowns-table-body"></tbody>
+              </table>
+            </div>
+            <div id="breakdowns-empty" class="empty-state hidden">
+              <div class="empty-state-icon">📋</div>
+              <p>No breakdowns reported yet.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -956,19 +1108,23 @@
           </button>
         </div>
         <div class="grid-2 mb-6">
-          <div class="glass" style="padding: 24px;">
-            <div class="calendar-header">
-              <div class="calendar-title" id="calendar-month-year">Month Year</div>
-              <div class="calendar-nav">
-                <button class="btn btn-soft btn-xs" onclick="changeCalendarMonth(-1)">◀</button>
-                <button class="btn btn-soft btn-xs" onclick="changeCalendarMonth(1)">▶</button>
+          <div class="card">
+            <div class="card-body">
+              <div class="calendar-header">
+                <div class="calendar-title" id="calendar-month-year">Month Year</div>
+                <div class="calendar-nav">
+                  <button class="btn btn-soft btn-xs" onclick="changeCalendarMonth(-1)">◀</button>
+                  <button class="btn btn-soft btn-xs" onclick="changeCalendarMonth(1)">▶</button>
+                </div>
               </div>
+              <div class="calendar-grid" id="calendar-grid"></div>
             </div>
-            <div class="calendar-grid" id="calendar-grid"></div>
           </div>
-          <div class="glass" style="padding: 24px;">
-            <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">📋 Maintenance List</h3>
-            <div id="maintenance-list"></div>
+          <div class="card">
+            <div class="card-body">
+              <h3 style="font-size:16px; font-weight:700; margin-bottom:20px;">📋 Maintenance List</h3>
+              <div id="maintenance-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -992,24 +1148,26 @@
             <input type="file" id="upload-machinery" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('machinery', this)">
           </div>
         </div>
-        <div class="glass" style="padding: 24px;">
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Machine Name</th>
-                  <th>Description</th>
-                  <th>Manager</th>
-                  <th>Operator</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="machines-table-body"></tbody>
-            </table>
-          </div>
-          <div id="machines-empty" class="empty-state hidden">
-            <div class="empty-state-icon">🏭</div>
-            <p>No machines registered yet.</p>
+        <div class="card">
+          <div class="card-body">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Machine Name</th>
+                    <th>Description</th>
+                    <th>Manager</th>
+                    <th>Operator</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="machines-table-body"></tbody>
+              </table>
+            </div>
+            <div id="machines-empty" class="empty-state hidden">
+              <div class="empty-state-icon">🏭</div>
+              <p>No machines registered yet.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1021,8 +1179,8 @@
             <div class="page-subtitle">Generate and download maintenance reports</div>
           </div>
         </div>
-        <div class="glass" style="padding: 24px; margin-bottom: 24px;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">🔍 Generate Report</h3>
+        <div class="card" style="padding: 24px; margin-bottom: 24px;">
+          <h3 style="font-size:16px; font-weight:700; margin-bottom:20px;">🔍 Generate Report</h3>
           <div class="grid-2">
             <div class="form-group">
               <label class="form-label">Date From</label>
@@ -1054,15 +1212,15 @@
             </button>
           </div>
         </div>
-        <div class="printable-report glass" id="printable-report" style="background:white; color:#1a1a2e;">
+        <div class="printable-report card" id="printable-report">
           <div style="text-align:center; margin-bottom:30px; border-bottom:2px solid #eee; padding-bottom:20px;">
-            <h1 style="font-size:28px; margin-bottom:8px;">CMMS Maintenance Report</h1>
+            <h1 style="font-size:28px; margin-bottom:8px; color:#1A1A1A;">CMMS Maintenance Report</h1>
             <p style="color:#666;" id="report-meta">Generated on ...</p>
           </div>
           <div id="report-content"></div>
         </div>
-        <div class="glass" style="padding: 24px;">
-          <h3 style="font-size:18px; font-weight:700; margin-bottom:20px;">📄 Previous Reports</h3>
+        <div class="card" style="padding: 24px;">
+          <h3 style="font-size:16px; font-weight:700; margin-bottom:20px;">📄 Previous Reports</h3>
           <div class="table-container">
             <table class="data-table">
               <thead>
@@ -1094,9 +1252,9 @@
           <button class="tab-btn" onclick="switchSettingsTab('priorities')">Priorities</button>
         </div>
         <div class="tab-panel active" id="tab-departments">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">Departments</h3>
+              <h3 style="font-size:16px; font-weight:700;">Departments</h3>
               <button class="btn btn-primary btn-sm hidden" id="btn-add-dept" onclick="openAddSettingModal('departments')">➕ Add</button>
             </div>
             <div class="table-container">
@@ -1108,9 +1266,9 @@
           </div>
         </div>
         <div class="tab-panel" id="tab-positions">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">Positions</h3>
+              <h3 style="font-size:16px; font-weight:700;">Positions</h3>
               <button class="btn btn-primary btn-sm hidden" id="btn-add-position" onclick="openAddSettingModal('positions')">➕ Add</button>
             </div>
             <div class="table-container">
@@ -1122,9 +1280,9 @@
           </div>
         </div>
         <div class="tab-panel" id="tab-downtime">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">Downtime Impact Levels</h3>
+              <h3 style="font-size:16px; font-weight:700;">Downtime Impact Levels</h3>
               <button class="btn btn-primary btn-sm hidden" id="btn-add-downtime" onclick="openAddSettingModal('downtime_impacts')">➕ Add</button>
             </div>
             <div class="table-container">
@@ -1136,9 +1294,9 @@
           </div>
         </div>
         <div class="tab-panel" id="tab-faults">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">Fault Types</h3>
+              <h3 style="font-size:16px; font-weight:700;">Fault Types</h3>
               <button class="btn btn-primary btn-sm hidden" id="btn-add-fault" onclick="openAddFaultModal()">➕ Add</button>
             </div>
             <div class="table-container">
@@ -1150,9 +1308,9 @@
           </div>
         </div>
         <div class="tab-panel" id="tab-priorities">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">Priorities</h3>
+              <h3 style="font-size:16px; font-weight:700;">Priorities</h3>
               <button class="btn btn-primary btn-sm hidden" id="btn-add-priority" onclick="openAddSettingModal('priorities')">➕ Add</button>
             </div>
             <div class="table-container">
@@ -1177,15 +1335,15 @@
           <button class="tab-btn" onclick="switchUsersTab('roles')">Role Master</button>
         </div>
         <div class="tab-panel active" id="tab-users">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">System Users</h3>
+              <h3 style="font-size:16px; font-weight:700;">System Users</h3>
               <div class="flex gap-3">
-              <button class="btn btn-primary btn-sm hidden" id="btn-add-user" onclick="openAddUserModal()">➕ Add User</button>
-              <button class="btn btn-soft btn-sm" onclick="downloadTemplate('users')">📥 Template</button>
-              <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-users').click()">📤 Upload Excel</button>
-              <input type="file" id="upload-users" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('users', this)">
-            </div>
+                <button class="btn btn-primary btn-sm hidden" id="btn-add-user" onclick="openAddUserModal()">➕ Add User</button>
+                <button class="btn btn-soft btn-sm" onclick="downloadTemplate('users')">📥 Template</button>
+                <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-users').click()">📤 Upload Excel</button>
+                <input type="file" id="upload-users" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('users', this)">
+              </div>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1205,15 +1363,15 @@
           </div>
         </div>
         <div class="tab-panel" id="tab-roles">
-          <div class="glass" style="padding: 24px;">
+          <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-              <h3 style="font-size:18px; font-weight:700;">Role Master</h3>
+              <h3 style="font-size:16px; font-weight:700;">Role Master</h3>
               <div class="flex gap-3">
-              <button class="btn btn-primary btn-sm hidden" id="btn-add-role" onclick="openAddRoleModal()">➕ Add Role</button>
-              <button class="btn btn-soft btn-sm" onclick="downloadTemplate('roles')">📥 Template</button>
-              <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-roles').click()">📤 Upload Excel</button>
-              <input type="file" id="upload-roles" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('roles', this)">
-            </div>
+                <button class="btn btn-primary btn-sm hidden" id="btn-add-role" onclick="openAddRoleModal()">➕ Add Role</button>
+                <button class="btn btn-soft btn-sm" onclick="downloadTemplate('roles')">📥 Template</button>
+                <button class="btn btn-success btn-sm" onclick="document.getElementById('upload-roles').click()">📤 Upload Excel</button>
+                <input type="file" id="upload-roles" class="hidden" accept=".xlsx,.xls,.csv" onchange="handleUpload('roles', this)">
+              </div>
             </div>
             <div class="table-container">
               <table class="data-table">
@@ -1235,12 +1393,12 @@
   </div>
 
   <div class="modal-overlay" id="modal-overlay">
-    <div class="modal-container glass-strong" id="modal-container">
+    <div class="modal-container" id="modal-container">
       <div class="modal-header">
         <div class="modal-title" id="modal-title">Modal Title</div>
         <button class="modal-close" onclick="closeModal()">×</button>
       </div>
-      <div id="modal-body" style="color:#111111;"></div>
+      <div id="modal-body" style="color:#1A1A1A;"></div>
       <div class="modal-footer" id="modal-footer">
         <button class="btn btn-soft" onclick="closeModal()">Cancel</button>
         <button class="btn btn-primary" id="modal-confirm-btn" onclick="modalConfirm()">Save</button>
@@ -1250,7 +1408,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
-  <script>
+<script>
     const SUPABASE_URL = 'https://hniwmubfijvlfmftihhl.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXdtdWJmaWp2bGZtZnRpaGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDE2MDYsImV4cCI6MjA5NjU3NzYwNn0.7prKa1OKM43SqO7sjhMSvy-F2Nm0RxeA5qRKnDz492o';
 
@@ -1271,15 +1429,26 @@
       'users-permissions': 'users_permissions'
     };
 
+    const NAV_ICONS = {
+      'dashboard': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
+      'my-machines': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>',
+      'breakdowns': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>',
+      'scheduled-maintenance': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+      'machinery': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22h20"></path><path d="M20 22v-5a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3v5"></path><path d="M4 22v-5a3 3 0 0 1 3-3h1"></path><path d="M14.5 9V4a2 2 0 0 0-2-2h-1a2 2 0 0 0-2 2v5"></path><path d="M9.5 14v-2a2 2 0 0 1 2-2h1a2 2 0 0 1 2 2v2"></path></svg>',
+      'reports': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+      'settings': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>',
+      'users-permissions': '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>'
+    };
+
     const NAV_ITEMS = [
-      { id: 'dashboard', label: 'Dashboard', icon: '📊', module: 'dashboard' },
-      { id: 'my-machines', label: 'My Machines', icon: '⚙️', module: 'my_machines' },
-      { id: 'breakdowns', label: 'Breakdowns', icon: '🔧', module: 'breakdowns' },
-      { id: 'scheduled-maintenance', label: 'Scheduled Maintenance', icon: '📅', module: 'scheduled_maintenance' },
-      { id: 'machinery', label: 'Machinery', icon: '🏭', module: 'machinery' },
-      { id: 'reports', label: 'Reports', icon: '📄', module: 'reports' },
-      { id: 'settings', label: 'Settings', icon: '⚙️', module: 'settings' },
-      { id: 'users-permissions', label: 'Users & Permissions', icon: '👥', module: 'users_permissions' }
+      { id: 'dashboard', label: 'Dashboard', module: 'dashboard' },
+      { id: 'my-machines', label: 'My Machines', module: 'my_machines' },
+      { id: 'breakdowns', label: 'Breakdowns', module: 'breakdowns' },
+      { id: 'scheduled-maintenance', label: 'Scheduled Maintenance', module: 'scheduled_maintenance' },
+      { id: 'machinery', label: 'Machinery', module: 'machinery' },
+      { id: 'reports', label: 'Reports', module: 'reports' },
+      { id: 'settings', label: 'Settings', module: 'settings' },
+      { id: 'users-permissions', label: 'Users & Permissions', module: 'users_permissions' }
     ];
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -1427,7 +1596,8 @@
       const nav = document.getElementById('nav-list');
       nav.innerHTML = NAV_ITEMS.map(item => {
         if (!canView(item.module)) return '';
-        return `<button class="nav-item" onclick="navigateTo('${item.id}')" data-page="${item.id}"><span class="nav-icon">${item.icon}</span><span class="nav-label">${item.label}</span></button>`;
+        const icon = NAV_ICONS[item.id] || '';
+        return `<button class="nav-item" onclick="navigateTo('${item.id}')" data-page="${item.id}"><span class="nav-icon">${icon}</span><span class="nav-label">${item.label}</span></button>`;
       }).join('');
     }
 
@@ -1486,18 +1656,18 @@
         else if (stage === 'closed') closedCount++;
       }
 
-      const { count: schedCount } = await supabase.from('scheduled_maintenance').select('*', { count: 'exact', head: true }).gte('date', today).not('status', 'eq', 'completed');
+      const { count: schedCount } = await supabase.from('scheduled_maintenance').select('*', { count: 'exact', head: true }).gte('date', today);
       document.getElementById('tally-open').textContent = openCount;
       document.getElementById('tally-in-progress').textContent = progressCount;
       document.getElementById('tally-pending').textContent = pendingCount;
       document.getElementById('tally-scheduled').textContent = schedCount || 0;
 
-      const { data: upcoming } = await supabase.from('scheduled_maintenance').select('*, machines(name)').gte('date', today).not('status', 'eq', 'completed').order('date', { ascending: true }).limit(5);
+      const { data: upcoming } = await supabase.from('scheduled_maintenance').select('*, machines(name)').gte('date', today).order('date', { ascending: true }).limit(5);
       const upList = document.getElementById('dash-upcoming-list');
       if (!upcoming || upcoming.length === 0) {
         upList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No upcoming maintenance scheduled.</p></div>';
       } else {
-        upList.innerHTML = upcoming.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewMaintenance('${m.id}')"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.description || 'No description'}</div></div><div class="badge badge-scheduled">${m.date}</div></div>`).join('');
+        upList.innerHTML = upcoming.map(m => `<div class="list-item" onclick="viewMaintenance('${m.id}')"><div><div class="list-item-title">${m.machines?.name || 'Unknown'}</div><div class="list-item-sub">${m.description || 'No description'}</div></div><div class="badge badge-scheduled">${m.date}</div></div>`).join('');
       }
 
       const { data: recent } = await supabase.from('breakdowns').select('*, machines(name), fault_types(name)').order('created_at', { ascending: false }).limit(5);
@@ -1518,7 +1688,7 @@
           const requiredCount = requiredIds.length || 1;
           const stage = getBreakdownWorkflowStage(b, bdApprovals, requiredCount);
           const stageLabel = stage === 'open' ? 'Open' : stage === 'in_progress' ? 'In Progress' : stage === 'pending_approval' ? 'Pending Approval' : 'Closed';
-          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewBreakdown('${b.id}')"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown fault'}</div></div><div class="badge badge-${stage}">${stageLabel}</div></div>`;
+          return `<div class="list-item" onclick="viewBreakdown('${b.id}')"><div><div class="list-item-title">${b.machines?.name || 'Unknown'}</div><div class="list-item-sub">${b.fault_types?.name || 'Unknown fault'}</div></div><div class="badge badge-${stage}">${stageLabel}</div></div>`;
         }));
         recList.innerHTML = recentRows.join('');
       }
@@ -1553,16 +1723,16 @@
             const requiredCount = requiredIds.length || 1;
             const stage = getBreakdownWorkflowStage(b, bdApprovals, requiredCount);
             const stageLabel = stage === 'open' ? 'Open' : stage === 'in_progress' ? 'In Progress' : stage === 'pending_approval' ? 'Pending Approval' : 'Closed';
-            return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewBreakdown('${b.id}')"><div><div style="font-weight:600;">${b.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${b.fault_types?.name || 'Unknown'}</div></div><div class="badge badge-${stage}">${stageLabel}</div></div>`;
+            return `<div class="list-item" onclick="viewBreakdown('${b.id}')"><div><div class="list-item-title">${b.machines?.name || 'Unknown'}</div><div class="list-item-sub">${b.fault_types?.name || 'Unknown'}</div></div><div class="badge badge-${stage}">${stageLabel}</div></div>`;
           }));
           bList.innerHTML = myRows.join('');
         }
-        const { data: maintenance } = await supabase.from('scheduled_maintenance').select('*, machines(name)').in('machine_id', machineIds).gte('date', new Date().toISOString().split('T')[0]).not('status', 'eq', 'completed').order('date', { ascending: true });
+        const { data: maintenance } = await supabase.from('scheduled_maintenance').select('*, machines(name)').in('machine_id', machineIds).gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true });
         const mList = document.getElementById('my-maintenance-list');
         if (!maintenance || maintenance.length === 0) {
           mList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No upcoming maintenance for your machines.</p></div>';
         } else {
-          mList.innerHTML = maintenance.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" onclick="viewMaintenance('${m.id}')"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.date} at ${m.time}</div></div><div class="badge badge-scheduled">${m.status}</div></div>`).join('');
+          mList.innerHTML = maintenance.map(m => `<div class="list-item" onclick="viewMaintenance('${m.id}')"><div><div class="list-item-title">${m.machines?.name || 'Unknown'}</div><div class="list-item-sub">${m.date} at ${m.time}</div></div><div class="badge badge-scheduled">${m.status}</div></div>`).join('');
         }
       } else {
         document.getElementById('my-breakdowns-list').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔧</div><p>No machines assigned.</p></div>';
@@ -1657,8 +1827,7 @@
       if (!list || list.length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No scheduled maintenance.</p></div>';
       } else {
-        const statusLabel = m.status === 'in_progress' ? 'In Progress' : m.status === 'completed' ? 'Completed' : 'Scheduled';
-        container.innerHTML = list.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.date} at ${m.time} &bull; ${m.description || 'No description'}</div></div><div style="display:flex; gap:8px; align-items:center;"><span class="badge badge-${m.status}">${statusLabel}</span><button class="btn btn-soft btn-xs" onclick="viewMaintenance('${m.id}')">👁️ View</button>${canEdit('scheduled_maintenance') ? `<button class="btn btn-soft btn-xs" onclick="editMaintenance('${m.id}')">Edit</button>` : ''}${canDelete('scheduled_maintenance') ? `<button class="btn btn-danger btn-xs" onclick="deleteMaintenance('${m.id}')">Delete</button>` : ''}</div></div>`).join('');
+        container.innerHTML = list.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.date} at ${m.time} &bull; ${m.description || 'No description'}</div></div><div style="display:flex; gap:8px; align-items:center;"><span class="badge badge-${m.status}">${m.status}</span><button class="btn btn-soft btn-xs" onclick="viewMaintenance('${m.id}')">👁️ View</button>${canEdit('scheduled_maintenance') ? `<button class="btn btn-soft btn-xs" onclick="editMaintenance('${m.id}')">Edit</button>` : ''}${canDelete('scheduled_maintenance') ? `<button class="btn btn-danger btn-xs" onclick="deleteMaintenance('${m.id}')">Delete</button>` : ''}</div></div>`).join('');
       }
     }
 
@@ -1697,7 +1866,7 @@
     async function showDayEvents(dateStr) {
       const { data: events } = await supabase.from('scheduled_maintenance').select('*, machines(name)').eq('date', dateStr);
       if (!events || events.length === 0) { showToast(`No maintenance scheduled for ${dateStr}`, 'info'); return; }
-      const html = events.map(e => `<div style="padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.05); border-radius:12px; cursor:pointer;" onclick="closeModal(); viewMaintenance('${e.id}');"><div style="font-weight:600;">${e.machines?.name || 'Unknown'}</div><div style="font-size:13px; color:var(--text-muted);">${e.time} &bull; ${e.description || 'No description'}</div></div>`).join('');
+      const html = events.map(e => `<div style="padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.05); border-radius:12px;"><div style="font-weight:600;">${e.machines?.name || 'Unknown'}</div><div style="font-size:13px; color:var(--text-muted);">${e.time} &bull; ${e.description || 'No description'}</div></div>`).join('');
       openModal(`Maintenance on ${dateStr}`, html, () => {});
       document.getElementById('modal-footer').classList.add('hidden');
     }
@@ -2557,63 +2726,32 @@
     async function viewMaintenance(id) {
       const { data: m } = await supabase.from('scheduled_maintenance').select('*, machines(name), users(full_name)').eq('id', id).single();
       if (!m) return;
-      const [{ data: deptJunctions }, { data: approvals }, { data: machine }] = await Promise.all([
-        supabase.from('maintenance_departments').select('department_id, departments(name)').eq('maintenance_id', id),
-        supabase.from('maintenance_approvals').select('*, users(full_name)').eq('maintenance_id', id),
-        supabase.from('machines').select('manager_id').eq('id', m.machine_id).single()
-      ]);
-      const involvedDepts = (deptJunctions || []).map(j => ({ id: j.department_id, name: j.departments?.name })).filter(d => d.id);
-      const deptNames = involvedDepts.map(d => d.name).join(', ') || 'None';
-
-      // Determine which departments have marked done
-      const doneUserIds = (approvals || []).filter(a => a.type === 'done').map(a => a.user_id);
-      let doneDeptIds = new Set();
-      if (doneUserIds.length > 0) {
-        const { data: doneUsers } = await supabase.from('users').select('department_id').in('id', doneUserIds);
-        doneDeptIds = new Set((doneUsers || []).map(u => u.department_id).filter(Boolean));
-      }
-
+      const { data: deptJunctions } = await supabase.from('maintenance_departments').select('departments(name)').eq('maintenance_id', id);
+      const deptNames = (deptJunctions || []).map(j => j.departments?.name).filter(Boolean).join(', ') || 'None';
+      const { data: approvals } = await supabase.from('maintenance_approvals').select('*, users(full_name)').eq('maintenance_id', id);
       const hasWorking = (approvals || []).some(a => a.type === 'working');
-      const allDone = involvedDepts.length > 0 && involvedDepts.every(d => doneDeptIds.has(d.id));
+      const hasDone = (approvals || []).some(a => a.type === 'done');
+      const doneCount = (approvals || []).filter(a => a.type === 'done').length;
 
+      // Determine stage
       let stage = 'scheduled';
       let stageLabel = 'Scheduled';
-      if (allDone) { stage = 'completed'; stageLabel = 'Completed'; }
+      if (hasDone) { stage = 'completed'; stageLabel = 'Completed'; }
       else if (hasWorking) { stage = 'in_progress'; stageLabel = 'In Progress'; }
 
-      // Who can act? Involved department members, machine manager, or edit-permission users
-      const userDeptId = currentUser.department_id;
-      const isInvolvedDept = involvedDepts.some(d => d.id === userDeptId);
-      const canAct = isInvolvedDept;
-
-      const userWorking = (approvals || []).find(a => a.user_id === currentUser.id && a.type === 'working');
-      const userDone = (approvals || []).find(a => a.user_id === currentUser.id && a.type === 'done');
-
-      // Department status tracker
-      let deptStatusHtml = '<div style="margin-bottom:16px;"><div style="font-size:14px; font-weight:600; margin-bottom:10px;">Department Status</div><div style="display:flex; flex-direction:column; gap:8px;">';
-      involvedDepts.forEach(d => {
-        const isDone = doneDeptIds.has(d.id);
-        if (isDone) {
-          deptStatusHtml += `<div style="padding:10px; background:rgba(27,94,32,0.08); border-radius:10px; border:1px solid rgba(27,94,32,0.2); display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:600; color:#1B5E20;">✅ ${d.name}</div><div style="font-size:12px; color:#666;">Completed</div></div>`;
-        } else {
-          deptStatusHtml += `<div style="padding:10px; background:rgba(230,81,0,0.08); border-radius:10px; border:1px solid rgba(230,81,0,0.2); display:flex; justify-content:space-between; align-items:center;"><div style="font-weight:600; color:#E65100;">⏳ ${d.name}</div><div style="font-size:12px; color:#666;">Pending</div></div>`;
-        }
-      });
-      deptStatusHtml += '</div></div>';
+      // Action buttons for machine manager or edit-permission users
+      const { data: machine } = await supabase.from('machines').select('manager_id').eq('id', m.machine_id).single();
+      const isManager = machine?.manager_id === currentUser.id;
+      const canEditMaint = canEdit('scheduled_maintenance');
+      const canAct = isManager || canEditMaint;
 
       let actionsHtml = '';
-      if (canAct && !allDone) {
-        if (!userWorking && !userDone) {
-          actionsHtml += `<button class="btn btn-primary w-full mb-3" onclick="startMaintenance('${id}')"><span>🔧</span> Working on it</button>`;
-        } else if (userWorking && !userDone) {
-          actionsHtml += `<div class="form-group"><label class="form-label">Completion Remarks (optional)</label><textarea class="form-textarea" id="maintenance-remarks" placeholder="Add remarks about the work done..."></textarea></div><button class="btn btn-success w-full" onclick="completeMaintenance('${id}')"><span>✅</span> Done</button>`;
-        } else if (userDone) {
-          actionsHtml += `<div style="padding:12px; background:rgba(27,94,32,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ You have marked this maintenance as done.</span></div>`;
-        }
-      } else if (!canAct && !allDone) {
-        actionsHtml += `<div style="padding:12px; background:rgba(230,81,0,0.08); border-radius:10px; text-align:center;"><span style="color:#E65100; font-weight:600;">⏳ Only members of the involved departments can act on this maintenance.</span></div>`;
-      } else if (allDone) {
-        actionsHtml += `<div style="padding:12px; background:rgba(27,94,32,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ All departments have completed this maintenance.</span></div>`;
+      if (canAct && !hasWorking) {
+        actionsHtml += `<button class="btn btn-primary w-full mb-3" onclick="startMaintenance('${id}')"><span>🔧</span> Working on it</button>`;
+      } else if (canAct && hasWorking && !hasDone) {
+        actionsHtml += `<button class="btn btn-success w-full" onclick="completeMaintenance('${id}')"><span>✅</span> Done</button>`;
+      } else if (hasDone) {
+        actionsHtml += `<div style="padding:12px; background:rgba(0,255,136,0.08); border-radius:10px; text-align:center;"><span style="color:#1B5E20; font-weight:600;">✅ Maintenance completed.</span></div>`;
       }
 
       let workersHtml = '';
@@ -2628,70 +2766,9 @@
         workersHtml += '</div>';
       }
 
-      const html = `<div style="margin-bottom:16px;"><div style="font-size:16px; font-weight:700; margin-bottom:4px;">${m.machines?.name || 'Unknown Machine'}</div><div style="font-size:13px; color:#666;">${m.description || 'No description'}</div><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><span class="badge badge-${stage}">${stageLabel}</span></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;"><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Date</div><div style="font-weight:600; font-size:14px;">${m.date}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Time</div><div style="font-weight:600; font-size:14px;">${m.time}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Created By</div><div style="font-weight:600; font-size:14px;">${m.users?.full_name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Departments</div><div style="font-weight:600; font-size:14px;">${deptNames}</div></div></div>${deptStatusHtml}${workersHtml}<div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:16px;">${actionsHtml}</div>`;
+      const html = `<div style="margin-bottom:16px;"><div style="font-size:16px; font-weight:700; margin-bottom:4px;">${m.machines?.name || 'Unknown Machine'}</div><div style="font-size:13px; color:#666;">${m.description || 'No description'}</div><div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;"><span class="badge badge-${stage}">${stageLabel}</span></div></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;"><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Date</div><div style="font-weight:600; font-size:14px;">${m.date}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Time</div><div style="font-weight:600; font-size:14px;">${m.time}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Created By</div><div style="font-weight:600; font-size:14px;">${m.users?.full_name || 'N/A'}</div></div><div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:10px;"><div style="font-size:11px; color:#666; text-transform:uppercase;">Departments</div><div style="font-weight:600; font-size:14px;">${deptNames}</div></div></div>${workersHtml}<div style="border-top:1px solid rgba(0,0,0,0.1); padding-top:16px;">${actionsHtml}</div>`;
       openModal('Maintenance Details', html, () => {});
       document.getElementById('modal-footer').classList.add('hidden');
-    }
-
-    async function startMaintenance(id) {
-      const { error } = await supabase.from('maintenance_approvals').insert({
-        maintenance_id: id,
-        user_id: currentUser.id,
-        type: 'working',
-        remarks: null
-      });
-      if (error) {
-        if (error.code === '409' || error.message.includes('duplicate') || error.message.includes('unique')) {
-          showToast('You have already marked this maintenance as working.', 'info');
-        } else {
-          showToast(error.message, 'error');
-        }
-        return;
-      }
-      // Update status from scheduled → in_progress
-      await supabase.from('scheduled_maintenance').update({ status: 'in_progress' }).eq('id', id).eq('status', 'scheduled');
-      showToast('Maintenance work started.', 'success');
-      closeModal();
-      loadScheduledMaintenance();
-      loadDashboard();
-    }
-
-    async function completeMaintenance(id) {
-      const remarks = document.getElementById('maintenance-remarks')?.value.trim() || '';
-      const { error } = await supabase.from('maintenance_approvals').insert({
-        maintenance_id: id,
-        user_id: currentUser.id,
-        type: 'done',
-        remarks: remarks || null
-      });
-      if (error) {
-        if (error.code === '409' || error.message.includes('duplicate') || error.message.includes('unique')) {
-          showToast('You have already marked this maintenance as done.', 'info');
-        } else {
-          showToast(error.message, 'error');
-        }
-        return;
-      }
-      // Check if all involved departments now have at least one done
-      const { data: deptJunctions } = await supabase.from('maintenance_departments').select('department_id').eq('maintenance_id', id);
-      const involvedDeptIds = (deptJunctions || []).map(j => j.department_id).filter(Boolean);
-      const { data: doneApprovals } = await supabase.from('maintenance_approvals').select('user_id').eq('maintenance_id', id).eq('type', 'done');
-      const doneUserIds = (doneApprovals || []).map(a => a.user_id);
-      let doneDeptIds = new Set();
-      if (doneUserIds.length > 0) {
-        const { data: doneUsers } = await supabase.from('users').select('department_id').in('id', doneUserIds);
-        doneDeptIds = new Set((doneUsers || []).map(u => u.department_id).filter(Boolean));
-      }
-      const allDone = involvedDeptIds.length > 0 && involvedDeptIds.every(did => doneDeptIds.has(did));
-      if (allDone) {
-        await supabase.from('scheduled_maintenance').update({ status: 'completed' }).eq('id', id);
-        showToast('All departments have completed. Maintenance marked as done.', 'success');
-      } else {
-        showToast('Marked as done. Waiting for other departments.', 'success');
-      }
-      closeModal();
-      loadScheduledMaintenance();
-      loadDashboard();
     }
 
     async function getRequiredApprovers(breakdown) {
