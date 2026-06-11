@@ -947,6 +947,29 @@
     }
 
     /* ============================================
+       COMPANY LOGO
+       ============================================ */
+    .sidebar-logo img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      display: block;
+    }
+    .login-header .logo-icon img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      display: block;
+    }
+    .a4-report-logo img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* ============================================
        UTILITIES
        ============================================ */
     .hidden { display: none !important; }
@@ -1491,6 +1514,14 @@
   <div class="toast-container" id="toast-container"></div>
 
 <script>
+    // ============================================
+    // COMPANY CONFIG — CHANGE THESE FOR A NEW COMPANY
+    // ============================================
+    const COMPANY_NAME = 'David Whitehead Textiles';
+    const COMPANY_LOGO = './company_logo.png';   // Upload your logo to GitHub repo same folder as index.html
+    // const COMPANY_LOGO = 'https://your-cdn.com/logo.png';  // Or use an external URL
+    // ============================================
+
     const SUPABASE_URL = 'https://hniwmubfijvlfmftihhl.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhuaXdtdWJmaWp2bGZtZnRpaGhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMDE2MDYsImV4cCI6MjA5NjU3NzYwNn0.7prKa1OKM43SqO7sjhMSvy-F2Nm0RxeA5qRKnDz492o';
 
@@ -1620,6 +1651,7 @@
       document.getElementById('user-role').textContent = currentUser.roles?.name || 'User';
       document.getElementById('user-avatar').textContent = (currentUser.full_name || currentUser.username || 'U').charAt(0).toUpperCase();
       document.getElementById('dash-username').textContent = currentUser.full_name || currentUser.username;
+      renderCompanyBranding();
       renderSidebar();
       let landing = currentUser.roles?.landing_page || 'dashboard';
       // Safety: if landing page doesn't exist in MODULES or user can't view it, fall back to dashboard
@@ -1628,6 +1660,33 @@
         landing = 'dashboard';
       }
       navigateTo(landing);
+    }
+
+    function renderCompanyBranding() {
+      // Sidebar logo
+      const sidebarLogo = document.querySelector('.sidebar-logo');
+      if (sidebarLogo) {
+        sidebarLogo.innerHTML = `<img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:28px; height:28px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\'></path></svg>';">`;
+      }
+      // Login page logo
+      const loginLogo = document.querySelector('.login-header .logo-icon');
+      if (loginLogo) {
+        loginLogo.innerHTML = `<img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:36px; height:36px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.textContent='🔧';">`;
+        loginLogo.style.background = 'transparent';
+        loginLogo.style.boxShadow = 'none';
+      }
+      // Login company name line
+      const loginHeader = document.querySelector('.login-header');
+      if (loginHeader && !loginHeader.querySelector('.company-name-line')) {
+        const p = loginHeader.querySelector('p');
+        if (p) {
+          const companyLine = document.createElement('p');
+          companyLine.className = 'company-name-line';
+          companyLine.style.cssText = 'font-weight:600; color:var(--text-secondary); font-size:13px; margin-top:4px; margin-bottom:8px;';
+          companyLine.textContent = COMPANY_NAME;
+          p.parentNode.insertBefore(companyLine, p);
+        }
+      }
     }
 
     function canView(module) { return !!currentPermissions[module]?.view; }
@@ -2165,9 +2224,9 @@
 
       return `<div class="a4-report-card" id="${reportId}">
         <div class="a4-report-header">
-          <div class="a4-report-logo">🔧</div>
+          <div class="a4-report-logo"><img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:48px; height:48px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.textContent='🔧';"></div>
           <div class="a4-report-title">BREAKDOWN REPORT</div>
-          <div class="a4-report-subtitle">Computerized Maintenance Management System</div>
+          <div class="a4-report-subtitle">${COMPANY_NAME} — Computerized Maintenance Management System</div>
         </div>
         <div class="a4-report-meta">
           <div><strong>Report #:</strong> ${num} of ${total}</div>
@@ -2255,9 +2314,9 @@
 
       return `<div class="a4-report-card" id="${reportId}">
         <div class="a4-report-header">
-          <div class="a4-report-logo">🔧</div>
+          <div class="a4-report-logo"><img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:48px; height:48px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.textContent='🔧';"></div>
           <div class="a4-report-title">MAINTENANCE REPORT</div>
-          <div class="a4-report-subtitle">Computerized Maintenance Management System</div>
+          <div class="a4-report-subtitle">${COMPANY_NAME} — Computerized Maintenance Management System</div>
         </div>
         <div class="a4-report-meta">
           <div><strong>Report #:</strong> ${num} of ${total}</div>
