@@ -953,8 +953,8 @@
        COMPANY LOGO
        ============================================ */
     .sidebar-logo img {
-      width: 72px;
-      height: 72px;
+      width: 200px;
+      height: 92px;
       object-fit: contain;
       display: block;
     }
@@ -1647,7 +1647,7 @@
       // Sidebar logo
       const sidebarLogo = document.querySelector('.sidebar-logo');
       if (sidebarLogo) {
-        sidebarLogo.innerHTML = `<img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:72px; height:72px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\'></path></svg>';">`;
+        sidebarLogo.innerHTML = `<img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:200px; height:92px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\'></path></svg>';">`;
       }
       // Login page logo
       const loginLogo = document.querySelector('.login-header .logo-icon');
@@ -2322,7 +2322,7 @@
 
       return `<div class="a4-report-card" id="${reportId}">
         <div class="a4-report-header">
-          <div class="a4-report-logo"><img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:72px; height:72px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.textContent='🔧';"></div>
+          <div class="a4-report-logo"><img src="${COMPANY_LOGO}" alt="${COMPANY_NAME}" style="width:200px; height:92px; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.textContent='🔧';"></div>
           <div class="a4-report-title">MAINTENANCE REPORT</div>
           <div class="a4-report-subtitle">${COMPANY_NAME} — Computerized Maintenance Management System</div>
         </div>
