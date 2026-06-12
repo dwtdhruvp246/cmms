@@ -572,6 +572,14 @@
     .calendar-day.selected.has-event::after {
       background: white;
     }
+    @media (max-width: 768px) {
+      .calendar-grid { gap: 2px; }
+      .calendar-day-header { font-size: 9px; padding: 4px 2px; letter-spacing: 0; }
+      .calendar-day { font-size: 12px; border-radius: 4px; }
+      .calendar-day.has-event::after { bottom: 2px; width: 4px; height: 4px; }
+      .calendar-title { font-size: 16px; }
+      .calendar-nav button { padding: 6px 10px; }
+    }
 
     /* ============================================
        TABS
@@ -1170,6 +1178,44 @@
     }
 
     /* ============================================
+       MAINTENANCE LIST
+       ============================================ */
+    .maint-list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-light);
+      gap: 12px;
+    }
+    .maint-list-info { flex: 1; min-width: 0; }
+    .maint-list-name { font-weight: 600; font-size: 14px; color: var(--text-primary); }
+    .maint-list-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .maint-list-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 768px) {
+      .maint-list-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .maint-list-actions {
+        align-self: stretch;
+        justify-content: flex-start;
+      }
+      .maint-list-actions button,
+      .maint-list-actions .badge {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+    }
+
+    /* ============================================
        UTILITIES
        ============================================ */
     .hidden { display: none !important; }
@@ -1451,7 +1497,7 @@
           </button>
         </div>
         <div class="grid-2 mb-6" id="sched-maint-grid">
-          <div class="card">
+          <div class="card" style="min-width:0;">
             <div class="card-body">
               <div class="calendar-header">
                 <div class="calendar-title" id="calendar-month-year">Month Year</div>
@@ -2200,7 +2246,7 @@
       if (!list || list.length === 0) {
         container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No scheduled maintenance.</p></div>';
       } else {
-        container.innerHTML = list.map(m => `<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><div><div style="font-weight:600;">${m.machines?.name || 'Unknown'}</div><div style="font-size:12px; color:var(--text-muted);">${m.date} at ${m.time} &bull; ${m.description || 'No description'}</div></div><div style="display:flex; gap:8px; align-items:center;"><span class="badge badge-${m.status}">${m.status}</span><button class="btn btn-soft btn-xs" onclick="viewMaintenance('${m.id}')">👁️ View</button>${canEdit('scheduled_maintenance') ? `<button class="btn btn-soft btn-xs" onclick="editMaintenance('${m.id}')">Edit</button>` : ''}${canDelete('scheduled_maintenance') ? `<button class="btn btn-danger btn-xs" onclick="deleteMaintenance('${m.id}')">Delete</button>` : ''}</div></div>`).join('');
+        container.innerHTML = list.map(m => `<div class="maint-list-item"><div class="maint-list-info"><div class="maint-list-name">${m.machines?.name || 'Unknown'}</div><div class="maint-list-meta">${m.date} at ${m.time} &bull; ${m.description || 'No description'}</div></div><div class="maint-list-actions"><span class="badge badge-${m.status}">${m.status}</span><button class="btn btn-soft btn-xs" onclick="viewMaintenance('${m.id}')">👁️ View</button>${canEdit('scheduled_maintenance') ? `<button class="btn btn-soft btn-xs" onclick="editMaintenance('${m.id}')">Edit</button>` : ''}${canDelete('scheduled_maintenance') ? `<button class="btn btn-danger btn-xs" onclick="deleteMaintenance('${m.id}')">Delete</button>` : ''}</div></div>`).join('');
       }
     }
 
