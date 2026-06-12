@@ -3274,7 +3274,7 @@
       } else {
         list.innerHTML = notifs.map(n => {
           const timeStr = new Date(n.created_at).toLocaleString();
-          return '<div class="notification-item ' + (n.is_read ? '' : 'unread') + '" onclick="markNotificationRead('' + n.id + '', '' + n.type + '', '' + n.related_id + '')"><div class="notification-item-title">' + n.title + '</div><div class="notification-item-msg">' + n.message + '</div><div class="notification-item-time">' + timeStr + '</div></div>';
+          return '<div class="notification-item ' + (n.is_read ? '' : 'unread') + '" onclick="markNotificationRead(\' + n.id + '\', \' + n.type + '\', \' + n.related_id + '\')"><div class="notification-item-title">' + n.title + '</div><div class="notification-item-msg">' + n.message + '</div><div class="notification-item-time">' + timeStr + '</div></div>';
         }).join('');
       }
       panel.classList.add('active');
